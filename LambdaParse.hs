@@ -1,10 +1,17 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
-module LambdaParse (parseTerm, parseFile) where
+{-# LANGUAGE OverloadedStrings #-}
+module LambdaParse where
 
 import Control.Applicative
 import Control.Monad
+
+import System.Environment
+
 import Text.Parsec hiding ((<|>), many)
 import Text.Parsec.String
+
+import qualified Text.PrettyPrint as P
+import Text.PrettyPrint ((<+>), (<>), Doc, text, render)
 
 data Token
     = LPAREN
@@ -15,7 +22,7 @@ data Token
     | COLON
     | ONE
     | ARR
-    deriving (Eq, Show)
+    deriving (Eq)
 
 lexPos :: Parser a -> (a -> b) -> Parser (b, SourcePos)
 lexPos p f = (,) <$> fmap f p <*> getPosition
@@ -41,7 +48,7 @@ type LambdaParser = Parsec [(Token, SourcePos)] ()
 data Type
     = One
     | Arr Type Type
-    deriving (Eq, Show)
+    deriving (Eq)
 
 match :: Token -> LambdaParser Token
 match t = token (show . fst) snd
@@ -69,7 +76,7 @@ data Term
     = Var String
     | App Term Term
     | Lam String Type Term
-    deriving (Eq, Show)
+    deriving (Eq)
 
 pVar :: LambdaParser Term
 pVar = fmap Var pId
@@ -90,3 +97,42 @@ parseTerm = lexTerm >=> parse pTerm ""
 
 parseFile :: FilePath -> IO Term
 parseFile = readFile >=> either (fail . show) return . parseTerm
+
+-- Show
+
+prettyType :: Type -> Doc
+prettyType One           = "1"
+prettyType (Arr One ty)  = "1" <+> "->" <+> prettyType ty
+prettyType (Arr ty1 ty2) = P.parens (prettyType ty1) <+> "->" <+> prettyType ty2
+
+prettyLApp :: Term -> Doc
+prettyLApp t@(Var _) = prettyTerm t
+prettyLApp t         = P.parens (prettyTerm t)
+
+prettyTerm :: Term -> Doc
+prettyTerm (Var v)                 = text v
+prettyTerm (App t1@(Lam _ _ _) t2) = P.parens (prettyTerm t1) <+> prettyLApp t2
+prettyTerm (App t1             t2) = prettyTerm t1 <+> prettyLApp t2
+prettyTerm (Lam v ty t)            =
+    "\\" <> text v <+> ":" <+> prettyType ty <+> "." <+> prettyTerm t
+
+instance Show Token where
+    show LPAREN = "("
+    show RPAREN = ")"
+    show LAMBDA = "\\"
+    show DOT    = "."
+    show (ID s) = s
+    show COLON  = ":"
+    show ONE    = "1"
+    show ARR    = "->"
+
+instance Show Type where
+    show = render . prettyType
+
+instance Show Term where
+    show = render . prettyTerm
+
+-- Helpers
+
+parseUserFile :: IO Term
+parseUserFile = getArgs >>= parseFile . head

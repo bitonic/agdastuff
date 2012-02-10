@@ -407,7 +407,6 @@ module Lambda where
   data Type : Set where
     ¹    : Type
     _=>_ : Type → Type → Type
-  {-# COMPILED_DATA Type Type One Arr #-}
 
   data Equal? : Type → Type → Set where
     yes : ∀ {τ} → Equal? τ τ
@@ -491,10 +490,13 @@ module Exercises3-2 where
   open import Data.List
   open Views
 
+  {-# IMPORT LambdaParse #-}
+
   infixr 30 _=>_
   data Type : Set where
     ¹    : Type
     _=>_ : Type → Type → Type
+  {-# COMPILED_DATA Type LambdaParse.Type LambdaParse.One LambdaParse.Arr #-}
 
   data _≠_ : Type → Type → Set where
     ¹≠=>    : ∀ {σ τ : Type} → ¹ ≠ (σ => τ)
@@ -660,27 +662,3 @@ module Exercises3-4 where
     printBList : {s : Schema}{n : ℕ} → BList (XML s) n → String
     printBList []         = ""
     printBList (xml ∷ bl) = printXML xml ++ printBList bl
-
-module Exercises4-1 where
-  open Exercises3-2
-  open import Data.String
-
-  data NamedTerm : Set where
-    var : String → NamedTerm
-    _$_ : NamedTerm → NamedTerm → NamedTerm
-    lam : String → Type → NamedTerm → NamedTerm
-  -- {-# COMPILED_DATA NamedTerm Term Var App Lam #-}
-
-  data Unit : Set where
-    unit : Unit
-  {-# COMPILED_DATA Unit () () #-}
-
-  postulate IO : Set → Set
-  {-# COMPILED_TYPE IO IO #-}
-
-  postulate
-    return : {A : Set} → A → IO A
-    _>>=_  : {A B : Set} → (A → IO B) → IO B
-
-  {-# COMPILED return (\a → return) #-}
-  {-# COMPILED _>>=_  (\a b → (>>=)) #-}
