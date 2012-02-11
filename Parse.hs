@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 {-# LANGUAGE OverloadedStrings #-}
-module LambdaParse where
+module Parse where
 
 import Control.Applicative
 import Control.Monad
