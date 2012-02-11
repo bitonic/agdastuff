@@ -23,11 +23,6 @@ _!_ : {A : Set}(xs : List A)(n : Fin (length xs)) → A
 (x ∷ xs) ! zero    = x
 (x ∷ xs) ! (suc n) = xs ! n
 
-index-∈ : {A : Set}(xs : List A)(n : Fin (length xs)) → (xs ! n) ∈ xs
-index-∈ []       ()
-index-∈ (x ∷ xs) zero    = hd
-index-∈ (x ∷ xs) (suc n) = tl (index-∈ xs n)
-
 infixr 30 _=>_
 data Type : Set where
   ¹    : Type
@@ -65,12 +60,12 @@ data Raw : ℕ → Set where
 Cxt = List Type
 
 data Term (Γ : Cxt) : Type → Set where
-  var : ∀ {τ} → τ ∈ Γ → Term Γ τ
+  var : (n : Fin (length Γ)) → Term Γ (Γ ! n)
   _$_ : ∀ {σ τ} → Term Γ (σ => τ) → Term Γ σ → Term Γ τ
   lam : ∀ σ {τ} → Term (σ ∷ Γ) τ → Term Γ (σ => τ)
 
 erase : ∀ {Γ τ} → Term Γ τ → Raw (length Γ)
-erase (var x)   = var (index x)
+erase (var n)   = var n
 erase (t $ u)   = erase t $ erase u
 erase (lam σ t) = lam σ (erase t)
 
@@ -94,7 +89,7 @@ data Infer (Γ : Cxt) : Raw (length Γ) → Set where
 
 infer : (Γ : Cxt)(e : Raw (length Γ)) → Infer Γ e
 
-infer Γ (var n) = {! !}
+infer Γ (var n) = ok (Γ ! n) (var n)
 
 infer Γ (t $ u) with infer Γ t
 infer Γ (.(eraseBad b) $ e₂) | bad b   = bad (b b$ e₂)
