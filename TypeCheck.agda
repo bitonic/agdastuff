@@ -1,38 +1,38 @@
 -- Exercise 4.1
-module LambdaTypeCheck where
+module TypeCheck where
 
 open import Data.Nat
 open import Data.List
 open import Data.String
+open import Data.Fin hiding (_+_)
 open import IO.Primitive
 open import Foreign.Haskell
 
-{-# IMPORT LambdaParse #-}
+{-# IMPORT Parse #-}
 
 data _∈_ {A : Set}(x : A) : List A → Set where
   hd : ∀ {xs}   → x ∈ (x ∷ xs)
   tl : ∀ {y xs} → x ∈ xs → x ∈ (y ∷ xs)
 
-index : ∀ {A}{x : A}{xs} → x ∈ xs → ℕ
+index : ∀ {A}{x : A}{xs} → x ∈ xs → Fin (length xs)
 index hd     = zero
 index (tl p) = suc (index p)
 
-data Lookup {A : Set}(xs : List A) : ℕ → Set where
-  inside  : (x : A)(p : x ∈ xs) → Lookup xs (index p)
-  outside : (m : ℕ) → Lookup xs (length xs + m)
+_!_ : {A : Set}(xs : List A)(n : Fin (length xs)) → A
+[]       ! ()
+(x ∷ xs) ! zero    = x
+(x ∷ xs) ! (suc n) = xs ! n
 
-_!_ : {A : Set}(xs : List A)(n : ℕ) → Lookup xs n
-[]       ! n    = outside n
-(x ∷ xs) ! zero = inside x hd
-(x ∷ xs) ! suc n with xs ! n
-(x ∷ xs) ! suc .(index p)       | inside y p = inside y (tl p)
-(x ∷ xs) ! suc .(length xs + n) | outside n  = outside n
+index-∈ : {A : Set}(xs : List A)(n : Fin (length xs)) → (xs ! n) ∈ xs
+index-∈ []       ()
+index-∈ (x ∷ xs) zero    = hd
+index-∈ (x ∷ xs) (suc n) = tl (index-∈ xs n)
 
 infixr 30 _=>_
 data Type : Set where
   ¹    : Type
   _=>_ : Type → Type → Type
-{-# COMPILED_DATA Type LambdaParse.Type LambdaParse.One LambdaParse.Arr #-}
+{-# COMPILED_DATA Type Parse.Type Parse.One Parse.Arr #-}
 
 data _≠_ : Type → Type → Set where
   ¹≠=>    : ∀ {σ τ : Type} → ¹ ≠ (σ => τ)
@@ -57,10 +57,10 @@ _=?=_ : (σ τ : Type) → Equal? σ τ
 (σ₁ => τ₁) =?= (σ₂ => τ₂) | no p | no q = no (p =>≠=> q)
 
 infixl 80 _$_
-data Raw : Set where
-  var : ℕ → Raw
-  _$_ : Raw → Raw → Raw
-  lam : Type → Raw → Raw
+data Raw : ℕ → Set where
+  var : ∀ {n} → Fin n → Raw n
+  _$_ : ∀ {n} → Raw n → Raw n → Raw n
+  lam : ∀ {n} → Type → Raw (suc n) → Raw n
 
 Cxt = List Type
 
@@ -69,36 +69,32 @@ data Term (Γ : Cxt) : Type → Set where
   _$_ : ∀ {σ τ} → Term Γ (σ => τ) → Term Γ σ → Term Γ τ
   lam : ∀ σ {τ} → Term (σ ∷ Γ) τ → Term Γ (σ => τ)
 
-erase : ∀ {Γ τ} → Term Γ τ → Raw
+erase : ∀ {Γ τ} → Term Γ τ → Raw (length Γ)
 erase (var x)   = var (index x)
 erase (t $ u)   = erase t $ erase u
 erase (lam σ t) = lam σ (erase t)
 
 data BadTerm (Γ : Cxt) : Set where
-  var  : (n : ℕ) → BadTerm Γ
-  _¹$_ : Term Γ ¹ → Raw → BadTerm Γ
+  _¹$_ : Term Γ ¹ → Raw (length Γ) → BadTerm Γ
   _≠$_ : ∀ {σ₁ σ₂ τ} → Term Γ (σ₁ => τ) → Term Γ σ₂ → (σ₁ ≠ σ₂) → BadTerm Γ
-  _b$_ : BadTerm Γ → Raw → BadTerm Γ
-  _$b_ : Raw → BadTerm Γ → BadTerm Γ
+  _b$_ : BadTerm Γ → Raw (length Γ) → BadTerm Γ
+  _$b_ : Raw (length Γ) → BadTerm Γ → BadTerm Γ
   lam  : ∀ σ → BadTerm (σ ∷ Γ) → BadTerm Γ
 
-eraseBad : {Γ : Cxt} → BadTerm Γ → Raw
-eraseBad {Γ} (var n)  = var (length Γ + n)
+eraseBad : {Γ : Cxt} → BadTerm Γ → Raw (length Γ)
 eraseBad (t ¹$ r)     = erase t $ r
 eraseBad ((t ≠$ u) p) = erase t $ erase u
 eraseBad (b b$ r)     = eraseBad b $ r
 eraseBad (r $b b)     = r $ eraseBad b
 eraseBad (lam σ b)    = lam σ (eraseBad b)
 
-data Infer (Γ : Cxt) : Raw → Set where
+data Infer (Γ : Cxt) : Raw (length Γ) → Set where
   ok  : (τ : Type)(t : Term Γ τ) → Infer Γ (erase t)
   bad : (b : BadTerm Γ) → Infer Γ (eraseBad b)
 
-infer : (Γ : Cxt)(e : Raw) → Infer Γ e
+infer : (Γ : Cxt)(e : Raw (length Γ)) → Infer Γ e
 
-infer Γ (var n) with Γ ! n
-infer Γ (var .(length Γ + n)) | outside n  = bad (var n)
-infer Γ (var .(index x))      | inside σ x = ok σ (var x)
+infer Γ (var n) = {! !}
 
 infer Γ (t $ u) with infer Γ t
 infer Γ (.(eraseBad b) $ e₂) | bad b   = bad (b b$ e₂)
@@ -117,17 +113,17 @@ infer Γ (lam σ e) with infer (σ ∷ Γ) e
 infer Γ (lam σ .(erase t))    | ok τ t = ok (σ => τ) (lam σ t)
 infer Γ (lam σ .(eraseBad b)) | bad b  = bad (lam σ b)
 
-data NamedTerm : Set where
-  var : String → NamedTerm
-  _$_ : NamedTerm → NamedTerm → NamedTerm
-  lam : String → Type → NamedTerm → NamedTerm
-{-# COMPILED_DATA NamedTerm LambdaParse.Term LambdaParse.Var LambdaParse.App LambdaParse.Lam #-}
+data Named : Set where
+  var : String → Named
+  _$_ : Named → Named → Named
+  lam : String → Type → Named → Named
+{-# COMPILED_DATA Named Parse.Term Parse.Var Parse.App Parse.Lam #-}
 
-postulate prettyTerm : NamedTerm → Costring
+postulate prettyTerm : Named → Costring
 {-# COMPILED prettyTerm show #-}
 
-postulate parseUserFile : IO NamedTerm
-{-# COMPILED parseUserFile LambdaParse.parseUserFile #-}
+postulate parseUserFile : IO Named
+{-# COMPILED parseUserFile Parse.parseUserFile #-}
 
 main : IO Unit
 main = parseUserFile >>= λ t →
