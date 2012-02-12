@@ -9,6 +9,7 @@ open import Data.Product hiding (map)
 open import Data.Bool
 open import IO.Primitive
 open import Foreign.Haskell
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
 {-# IMPORT Parse #-}
 
@@ -71,27 +72,40 @@ eraseRaw (t $ u)     = eraseRaw t $ eraseRaw u
 eraseRaw (lam n σ t) = lam n σ (eraseRaw t)
 
 data _∉_ (s : String) : (ss : List String) → Set where
-  nil  : s ∉ []
-  cons : ∀ {s' ss} → s ∉ ss → T (not (s == s')) → s ∉ (s' ∷ ss)
+  hd : s ∉ []
+  tl : ∀ {s' ss} → s ∉ ss → T (not (s == s')) → s ∉ (s' ∷ ss)
 
 data BadRaw (Γ : NameCxt) : Set where
-  var : (s : String) → (s ∉ Γ) → BadRaw Γ
+  var  : (s : String) → (s ∉ Γ) → BadRaw Γ
+  _b$_ : BadRaw Γ → Named → BadRaw Γ
+  _$b_ : Named → BadRaw Γ → BadRaw Γ
+  lam  : ∀ s → Type → BadRaw (s ∷ Γ) → BadRaw Γ
 
 eraseBadRaw : ∀ {Γ} → BadRaw Γ → Named
-eraseBadRaw (var s p) = var s
+eraseBadRaw (var s p)    = var s
+eraseBadRaw (b b$ t)     = eraseBadRaw b $ t
+eraseBadRaw (t $b b)     = t $ eraseBadRaw b
+eraseBadRaw (lam s ty b) = lam s ty (eraseBadRaw b)
 
 data Convert (Γ : NameCxt) : Named → Set where
   ok  : (t : Raw Γ) → Convert Γ (eraseRaw t)
   bad : (b : BadRaw Γ) → Convert Γ (eraseBadRaw b)
 
-convert : (Γ : NameCxt)(n : Named) → Raw Γ
-convert Γ n = {! !}
+convert : (Γ : NameCxt)(t : Named) → Convert Γ t
 
-map-length : {A B : Set} → (f : (A → B)) → (xs : List A) → Fin (length xs) →
-             Fin (length (map f xs))
-map-length f []       ()
-map-length f (x ∷ xs) (suc n) = suc (map-length f xs n)
-map-length f (x ∷ xs) zero    = zero
+convert Γ (var v)      = {! !}
+
+convert Γ (t $ u) with convert Γ t
+convert Γ (.(eraseBadRaw b) $ e₂) | bad b = bad (b b$ e₂)
+convert Γ (.(eraseRaw t₁) $ e₂)   | ok t₁ with convert Γ e₂
+convert Γ (.(eraseRaw t₁) $ .(eraseBadRaw b))
+  | ok t₁ | bad b = bad (eraseRaw t₁ $b b)
+convert Γ (.(eraseRaw t₁) $ .(eraseRaw t₂))
+  | ok t₁ | ok t₂ = ok (t₁ $ t₂)
+
+convert Γ (lam s ty t) with convert (s ∷ Γ) t
+convert Γ (lam s ty .(eraseRaw t))    | ok t  = ok (lam s ty t)
+convert Γ (lam s ty .(eraseBadRaw b)) | bad b = bad (lam s ty b)
 
 Cxt = List (String × Type)
 
@@ -101,7 +115,7 @@ data Term (Γ : Cxt) : Type → Set where
   lam : ∀ n σ {τ} → Term ((n , σ) ∷ Γ) τ → Term Γ (σ => τ)
 
 eraseTerm : ∀ {Γ τ} → Term Γ τ → Raw (map proj₁ Γ)
-eraseTerm {Γ} (var n) = var (map-length proj₁ Γ n)
+eraseTerm {Γ} (var n) = {! !}
 eraseTerm (t $ u)     = eraseTerm t $ eraseTerm u
 eraseTerm (lam n σ t) = lam n σ (eraseTerm t)
 
