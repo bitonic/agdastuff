@@ -1,15 +1,17 @@
 -- Exercise 4.1
 module TypeCheck where
 
-open import Data.Nat
+open import Data.Nat hiding (_≟_)
 open import Data.List
 open import Data.String
 open import Data.Fin hiding (_+_)
 open import Data.Product hiding (map)
-open import Data.Bool
+open import Data.Bool hiding (_≟_)
+open import Data.Empty
 open import IO.Primitive
 open import Foreign.Haskell
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
+open import Relation.Nullary
 
 {-# IMPORT Parse #-}
 
@@ -71,9 +73,31 @@ eraseRaw {Γ} (var n) = var (Γ ! n)
 eraseRaw (t $ u)     = eraseRaw t $ eraseRaw u
 eraseRaw (lam n σ t) = lam n σ (eraseRaw t)
 
-data _∉_ (s : String) : (ss : List String) → Set where
-  hd : s ∉ []
-  tl : ∀ {s' ss} → s ∉ ss → T (not (s == s')) → s ∉ (s' ∷ ss)
+data _∈_ {A : Set}(x : A) : List A → Set where
+  hd : ∀ {xs}   → x ∈ (x ∷ xs)
+  tl : ∀ {xs y} → x ∈ xs → x ∈ (y ∷ xs)
+
+_∉_ : {A : Set}(x : A) → List A → Set
+x ∉ xs = ¬ (x ∈ xs)
+
+∷-∉ : {A : Set}{x y : A}{xs : List A} → ¬ (x ≡ y) → (y ∉ xs) → (y ∉ (x ∷ xs))
+∷-∉ p₁ p₂ hd      = p₁ refl
+∷-∉ p₁ p₂ (tl p₃) = p₂ p₃
+
+empty-∉ : {A : Set}{x : A} → x ∉ []
+empty-∉ ()
+
+lookup : (xs : List String) → (x : String) → Dec (x ∈ xs)
+lookup []       x = no empty-∉
+lookup (x ∷ xs) y with x ≟ y
+lookup (x ∷ xs) .x | yes refl = yes hd
+lookup (x ∷ xs) y  | no p with lookup xs y
+lookup (x ∷ xs) y  | no p₁ | yes p₂ = yes (tl p₂)
+lookup (x ∷ xs) y  | no p₁ | no p₂  = no (∷-∉ p₁ p₂)
+
+index : ∀ {A}{x : A}{xs} → x ∈ xs → ℕ
+index hd     = zero
+index (tl p) = suc (index p)
 
 data BadRaw (Γ : NameCxt) : Set where
   var  : (s : String) → (s ∉ Γ) → BadRaw Γ
