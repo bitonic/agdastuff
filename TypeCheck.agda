@@ -15,11 +15,6 @@ open import Relation.Nullary
 
 {-# IMPORT Parse #-}
 
-_!_ : {A : Set}(xs : List A)(n : Fin (length xs)) → A
-[]       ! ()
-(x ∷ xs) ! zero    = x
-(x ∷ xs) ! (suc n) = xs ! n
-
 infixr 30 _=>_
 data Type : Set where
   ¹    : Type
@@ -60,19 +55,6 @@ postulate prettyTerm : Named → Costring
 postulate parseUserFile : IO Named
 {-# COMPILED parseUserFile Parse.parseUserFile #-}
 
-NameCxt = List String
-
-infixl 80 _$_
-data Raw (Γ : NameCxt) : Set where
-  var : Fin (length Γ) → Raw Γ
-  _$_ : Raw Γ → Raw Γ → Raw Γ
-  lam : ∀ s → Type → Raw (s ∷ Γ) → Raw Γ
-
-eraseRaw : ∀ {Γ} → Raw Γ → Named
-eraseRaw {Γ} (var n) = var (Γ ! n)
-eraseRaw (t $ u)     = eraseRaw t $ eraseRaw u
-eraseRaw (lam n σ t) = lam n σ (eraseRaw t)
-
 data _∈_ {A : Set}(x : A) : List A → Set where
   hd : ∀ {xs}   → x ∈ (x ∷ xs)
   tl : ∀ {xs y} → x ∈ xs → x ∈ (y ∷ xs)
@@ -87,6 +69,19 @@ x ∉ xs = ¬ (x ∈ xs)
 empty-∉ : {A : Set}{x : A} → x ∉ []
 empty-∉ ()
 
+NameCxt = List String
+
+infixl 80 _$_
+data Raw (Γ : NameCxt) : Set where
+  var : ∀ {s} → (s ∈ Γ) → Raw Γ
+  _$_ : Raw Γ → Raw Γ → Raw Γ
+  lam : ∀ s → Type → Raw (s ∷ Γ) → Raw Γ
+
+eraseRaw : ∀ {Γ} → Raw Γ → Named
+eraseRaw (var {s} n) = var s
+eraseRaw (t $ u)     = eraseRaw t $ eraseRaw u
+eraseRaw (lam n σ t) = lam n σ (eraseRaw t)
+
 lookup : (xs : List String) → (x : String) → Dec (x ∈ xs)
 lookup []       x = no empty-∉
 lookup (x ∷ xs) y with x ≟ y
@@ -95,18 +90,14 @@ lookup (x ∷ xs) y  | no p with lookup xs y
 lookup (x ∷ xs) y  | no p₁ | yes p₂ = yes (tl p₂)
 lookup (x ∷ xs) y  | no p₁ | no p₂  = no (∷-∉ p₁ p₂)
 
-index : ∀ {A}{x : A}{xs} → x ∈ xs → ℕ
-index hd     = zero
-index (tl p) = suc (index p)
-
 data BadRaw (Γ : NameCxt) : Set where
-  var  : (s : String) → (s ∉ Γ) → BadRaw Γ
+  var  : ∀ {s} → (s ∉ Γ) → BadRaw Γ
   _b$_ : BadRaw Γ → Named → BadRaw Γ
   _$b_ : Named → BadRaw Γ → BadRaw Γ
   lam  : ∀ s → Type → BadRaw (s ∷ Γ) → BadRaw Γ
 
 eraseBadRaw : ∀ {Γ} → BadRaw Γ → Named
-eraseBadRaw (var s p)    = var s
+eraseBadRaw (var {s} p)  = var s
 eraseBadRaw (b b$ t)     = eraseBadRaw b $ t
 eraseBadRaw (t $b b)     = t $ eraseBadRaw b
 eraseBadRaw (lam s ty b) = lam s ty (eraseBadRaw b)
@@ -117,7 +108,9 @@ data Convert (Γ : NameCxt) : Named → Set where
 
 convert : (Γ : NameCxt)(t : Named) → Convert Γ t
 
-convert Γ (var v)      = {! !}
+convert Γ (var v) with lookup Γ v
+convert Γ (var v) | yes p = ok (var p)
+convert Γ (var v) | no p  = bad (var p)
 
 convert Γ (t $ u) with convert Γ t
 convert Γ (.(eraseBadRaw b) $ e₂) | bad b = bad (b b$ e₂)
@@ -134,12 +127,17 @@ convert Γ (lam s ty .(eraseBadRaw b)) | bad b = bad (lam s ty b)
 Cxt = List (String × Type)
 
 data Term (Γ : Cxt) : Type → Set where
-  var : (n : Fin (length Γ)) → Term Γ (proj₂ (Γ ! n))
+  var : ∀ {τ s} → ((s , τ) ∈ Γ) → Term Γ τ
   _$_ : ∀ {σ τ} → Term Γ (σ => τ) → Term Γ σ → Term Γ τ
   lam : ∀ n σ {τ} → Term ((n , σ) ∷ Γ) τ → Term Γ (σ => τ)
 
+∈-proj₁ : {A : Set}{B : Set}{x : A}{y : B}{xys : List (A × B)} →
+          (x , y) ∈ xys → x ∈ (map proj₁ xys)
+∈-proj₁ hd     = hd
+∈-proj₁ (tl p) = tl (∈-proj₁ p)
+
 eraseTerm : ∀ {Γ τ} → Term Γ τ → Raw (map proj₁ Γ)
-eraseTerm {Γ} (var n) = {! !}
+eraseTerm (var p)     = var (∈-proj₁ p)
 eraseTerm (t $ u)     = eraseTerm t $ eraseTerm u
 eraseTerm (lam n σ t) = lam n σ (eraseTerm t)
 
@@ -161,9 +159,17 @@ data Infer (Γ : Cxt) : Raw (map proj₁ Γ) → Set where
   ok  : (τ : Type)(t : Term Γ τ) → Infer Γ (eraseTerm t)
   bad : (b : BadTerm Γ) → Infer Γ (eraseBadTerm b)
 
+keyValue : {A B : Set} → (k : A) (kvs : List (A × B)) →
+              k ∈ (map proj₁ kvs) → Σ B (λ v → (k , v) ∈ kvs)
+keyValue k []               ()
+keyValue k ((.k , v) ∷ kvs) hd     = v , hd
+keyValue k ((k' , v) ∷ kvs) (tl p) with keyValue k kvs p
+keyValue k ((k' , v) ∷ kvs) (tl p) | (v' , p') = v' , tl p'
+
 infer : (Γ : Cxt)(e : Raw (map proj₁ Γ)) → Infer Γ e
 
-infer Γ (var n) = {! !}
+infer Γ (var {s = s} n) with keyValue s Γ n
+infer Γ (var {s = s} n) | (τ , p) = {! !} -- ok τ (var p)
 
 infer Γ (t $ u) with infer Γ t
 infer Γ (.(eraseBadTerm b) $ e₂) | bad b   = bad (b b$ e₂)
