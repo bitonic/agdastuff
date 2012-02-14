@@ -95,8 +95,8 @@ lexTerm = parse lexer ""
 parseTerm :: String -> Either ParseError Term
 parseTerm = lexTerm >=> parse pTerm ""
 
-parseFile :: FilePath -> IO Term
-parseFile = readFile >=> either (fail . show) return . parseTerm
+parseTerm' :: Monad m => String -> m Term
+parseTerm' = either (fail . show) return . parseTerm
 
 -- Show
 
@@ -111,9 +111,9 @@ prettyLApp t         = P.parens (prettyTerm t)
 
 prettyTerm :: Term -> Doc
 prettyTerm (Var v)                 = text v
-prettyTerm (App t1@(Lam _ _ _) t2) = P.parens (prettyTerm t1) <+> prettyLApp t2
 prettyTerm (App t1             t2) = prettyTerm t1 <+> prettyLApp t2
 prettyTerm (Lam v ty t)            =
+    P.parens $
     "\\" <> text v <+> ":" <+> prettyType ty <+> "." <+> prettyTerm t
 
 instance Show Token where
@@ -134,5 +134,9 @@ instance Show Term where
 
 -- Helpers
 
-parseUserFile :: IO Term
-parseUserFile = getArgs >>= parseFile . head
+readUserFile :: IO String
+readUserFile =
+    getArgs >>= \args -> case args of
+        [fn] -> readFile fn
+        _    -> do n <- getProgName
+                   fail ("Usage: ./" ++ n ++ " filename")

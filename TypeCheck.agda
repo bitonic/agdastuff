@@ -1,5 +1,6 @@
 module TypeCheck where
 
+open import Data.Empty
 open import Data.List
 open import Data.String
 open import Data.Product
@@ -15,6 +16,9 @@ data Type : Set where
   ¹    : Type
   _=>_ : Type → Type → Type
 {-# COMPILED_DATA Type Parse.Type Parse.One Parse.Arr #-}
+
+postulate prettyType : Type → String
+{-# COMPILED prettyType show #-}
 
 data _≠_ : Type → Type → Set where
   ¹≠=>    : ∀ {σ τ : Type} → ¹ ≠ (σ => τ)
@@ -44,11 +48,11 @@ data Raw : Set where
   lam : String → Type → Raw → Raw
 {-# COMPILED_DATA Raw Parse.Term Parse.Var Parse.App Parse.Lam #-}
 
-postulate prettyTerm : Raw → Costring
+postulate prettyTerm : Raw → String
 {-# COMPILED prettyTerm show #-}
 
-postulate parseUserFile : IO Raw
-{-# COMPILED parseUserFile Parse.parseUserFile #-}
+postulate parseTerm : String → IO Raw
+{-# COMPILED parseTerm Parse.parseTerm' #-}
 
 Map : (A B : Set) → Set
 Map A B = List (A × B)
@@ -113,6 +117,10 @@ data Infer (Γ : Cxt) : Raw → Set where
   ok  : (τ : Type)(t : Term Γ τ) → Infer Γ (erase t)
   bad : (b : BadTerm Γ) → Infer Γ (eraseBad b)
 
+prettyInfer : ∀ {Γ e} → Infer Γ e → String
+prettyInfer (ok τ _) = prettyType τ
+prettyInfer (bad _)  = "type error" -- TODO: Better error reporting
+
 infer : (Γ : Cxt)(e : Raw) → Infer Γ e
 
 infer Γ (var s) with lookup Γ s
@@ -136,9 +144,12 @@ infer Γ (lam s σ e) with infer ((s , σ) ∷ Γ) e
 infer Γ (lam s σ .(erase t))    | ok τ t = ok (σ => τ) (lam s σ t)
 infer Γ (lam s σ .(eraseBad b)) | bad b  = bad (lam s σ b)
 
+postulate readUserFile : IO String
+{-# COMPILED readUserFile Parse.readUserFile #-}
+
 main : IO Unit
 main =
-  parseUserFile                             >>= λ t →
-  putStr (prettyTerm t)                     >>= λ _ →
-  putStr (toCostring " : ")                 >>= λ _ →
-  putStrLn (toCostring "type will go here")
+  readUserFile >>= parseTerm                                  >>= λ t →
+  putStr (toCostring (prettyTerm t))                          >>= λ _ →
+  putStr (toCostring " : ")                                   >>= λ _ →
+  putStrLn (toCostring (prettyInfer (infer [] t)))
