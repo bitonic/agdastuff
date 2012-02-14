@@ -1,7 +1,7 @@
 module TypeCheck where
 
 open import Data.Empty
-open import Data.List
+open import Data.List hiding (_++_)
 open import Data.String
 open import Data.Product
 open import IO.Primitive
@@ -17,7 +17,7 @@ data Type : Set where
   _=>_ : Type → Type → Type
 {-# COMPILED_DATA Type Parse.Type Parse.One Parse.Arr #-}
 
-postulate prettyType : Type → Costring
+postulate prettyType : Type → String
 {-# COMPILED prettyType show #-}
 
 data _≠_ : Type → Type → Set where
@@ -45,10 +45,10 @@ data Raw : Set where
   lam : String → Type → Raw → Raw
 {-# COMPILED_DATA Raw Parse.Term Parse.Var Parse.App Parse.Lam #-}
 
-postulate prettyTerm : Raw → Costring
+postulate prettyTerm : Raw → String
 {-# COMPILED prettyTerm show #-}
 
-postulate parseTerm : Costring → IO Raw
+postulate parseTerm : String → IO Raw
 {-# COMPILED parseTerm Parse.parseTerm' #-}
 
 Map : (A B : Set) → Set
@@ -114,9 +114,18 @@ data Infer (Γ : Cxt) : Raw → Set where
   ok  : (τ : Type)(t : Term Γ τ) → Infer Γ (erase t)
   bad : (b : BadTerm Γ) → Infer Γ (eraseBad b)
 
-prettyInfer : ∀ {Γ e} → Infer Γ e → Costring
-prettyInfer (ok τ _) = prettyType τ
-prettyInfer (bad _)  = toCostring "type error" -- TODO: Better error reporting
+redColor : String
+redColor = "\\033[1;31m"
+
+noColor : String
+noColor = "\\e[0m"
+
+prettyBadTerm : ∀ {Γ} → BadTerm Γ → String
+prettyBadTerm b = redColor ++ "lol" ++ noColor
+
+prettyInfer : ∀ {Γ e} → Infer Γ e → String
+prettyInfer (ok τ t) = prettyTerm (erase t) ++ " : " ++ prettyType τ
+prettyInfer (bad b)  = prettyBadTerm b
 
 infer : (Γ : Cxt)(e : Raw) → Infer Γ e
 
@@ -141,12 +150,10 @@ infer Γ (lam s σ e) with infer ((s , σ) ∷ Γ) e
 infer Γ (lam s σ .(erase t))    | ok τ t = ok (σ => τ) (lam s σ t)
 infer Γ (lam s σ .(eraseBad b)) | bad b  = bad (lam s σ b)
 
-postulate readUserFile : IO Costring
+postulate readUserFile : IO String
 {-# COMPILED readUserFile Parse.readUserFile #-}
 
 main : IO Unit
 main =
-  readUserFile >>= parseTerm                                  >>= λ t →
-  putStr (prettyTerm t)                                       >>= λ _ →
-  putStr (toCostring " : ")                                   >>= λ _ →
-  putStrLn (prettyInfer (infer [] t))
+  readUserFile >>= parseTerm >>= λ t →
+  putStrLn (toCostring (prettyInfer (infer [] t)))
