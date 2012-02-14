@@ -1,4 +1,4 @@
-module TypeCheck2 where
+module TypeCheck where
 
 open import Data.List
 open import Data.String
