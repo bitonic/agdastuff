@@ -110,9 +110,9 @@ prettyLApp t@(Var _) = prettyTerm t
 prettyLApp t         = P.parens (prettyTerm t)
 
 prettyTerm :: Term -> Doc
-prettyTerm (Var v)                 = text v
-prettyTerm (App t1             t2) = prettyTerm t1 <+> prettyLApp t2
-prettyTerm (Lam v ty t)            =
+prettyTerm (Var v)      = text v
+prettyTerm (App t1 t2)  = prettyTerm t1 <+> prettyLApp t2
+prettyTerm (Lam v ty t) =
     P.parens $
     "\\" <> text v <+> ":" <+> prettyType ty <+> "." <+> prettyTerm t
 

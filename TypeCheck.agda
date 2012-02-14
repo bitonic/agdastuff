@@ -17,16 +17,14 @@ data Type : Set where
   _=>_ : Type → Type → Type
 {-# COMPILED_DATA Type Parse.Type Parse.One Parse.Arr #-}
 
-postulate prettyType : Type → String
+postulate prettyType : Type → Costring
 {-# COMPILED prettyType show #-}
 
 data _≠_ : Type → Type → Set where
   ¹≠=>    : ∀ {σ τ : Type} → ¹ ≠ (σ => τ)
   =>≠¹    : ∀ {σ τ : Type} → (σ => τ) ≠ ¹
-  _≠=>    : ∀ {σ₁ σ₂ τ : Type} → (σ₁ ≠ σ₂) → (σ₁ => τ) ≠ (σ₂ => τ)
-  =>≠_    : ∀ {σ τ₁ τ₂ : Type} → (τ₁ ≠ τ₂) → (σ => τ₁) ≠ (σ => τ₂)
-  _=>≠=>_ : ∀ {σ₁ τ₁ σ₂ τ₂ : Type} →
-            (σ₁ ≠ σ₂) → (τ₁ ≠ τ₂) → (σ₁ => τ₁) ≠ (σ₂ => τ₂)
+  _≠=>    : ∀ {σ₁ σ₂ τ₁ τ₂ : Type} → (σ₁ ≠ σ₂) → (σ₁ => τ₁) ≠ (σ₂ => τ₂)
+  =>≠_    : ∀ {σ₁ σ₂ τ₁ τ₂ : Type} → (τ₁ ≠ τ₂) → (σ₁ => τ₁) ≠ (σ₂ => τ₂)
 
 data Equal? : Type → Type → Set where
   yes : ∀ {τ} → Equal? τ τ
@@ -39,8 +37,7 @@ _=?=_ : (σ τ : Type) → Equal? σ τ
 (σ₁ => τ₁) =?= (σ₂ => τ₂) with σ₁ =?= σ₂ | τ₁ =?= τ₂
 (σ => τ)   =?= (.σ => .τ) | yes  | yes  = yes
 (σ => τ₁)  =?= (.σ => τ₂) | yes  | no p = no (=>≠ p)
-(σ₁ => τ)  =?= (σ₂ => .τ) | no p | yes  = no (p ≠=>)
-(σ₁ => τ₁) =?= (σ₂ => τ₂) | no p | no q = no (p =>≠=> q)
+(σ₁ => τ₁) =?= (σ₂ => τ₂) | no p | q    = no (p ≠=>)
 
 data Raw : Set where
   var : String → Raw
@@ -48,10 +45,10 @@ data Raw : Set where
   lam : String → Type → Raw → Raw
 {-# COMPILED_DATA Raw Parse.Term Parse.Var Parse.App Parse.Lam #-}
 
-postulate prettyTerm : Raw → String
+postulate prettyTerm : Raw → Costring
 {-# COMPILED prettyTerm show #-}
 
-postulate parseTerm : String → IO Raw
+postulate parseTerm : Costring → IO Raw
 {-# COMPILED parseTerm Parse.parseTerm' #-}
 
 Map : (A B : Set) → Set
@@ -117,9 +114,9 @@ data Infer (Γ : Cxt) : Raw → Set where
   ok  : (τ : Type)(t : Term Γ τ) → Infer Γ (erase t)
   bad : (b : BadTerm Γ) → Infer Γ (eraseBad b)
 
-prettyInfer : ∀ {Γ e} → Infer Γ e → String
+prettyInfer : ∀ {Γ e} → Infer Γ e → Costring
 prettyInfer (ok τ _) = prettyType τ
-prettyInfer (bad _)  = "type error" -- TODO: Better error reporting
+prettyInfer (bad _)  = toCostring "type error" -- TODO: Better error reporting
 
 infer : (Γ : Cxt)(e : Raw) → Infer Γ e
 
@@ -144,12 +141,12 @@ infer Γ (lam s σ e) with infer ((s , σ) ∷ Γ) e
 infer Γ (lam s σ .(erase t))    | ok τ t = ok (σ => τ) (lam s σ t)
 infer Γ (lam s σ .(eraseBad b)) | bad b  = bad (lam s σ b)
 
-postulate readUserFile : IO String
+postulate readUserFile : IO Costring
 {-# COMPILED readUserFile Parse.readUserFile #-}
 
 main : IO Unit
 main =
   readUserFile >>= parseTerm                                  >>= λ t →
-  putStr (toCostring (prettyTerm t))                          >>= λ _ →
+  putStr (prettyTerm t)                                       >>= λ _ →
   putStr (toCostring " : ")                                   >>= λ _ →
-  putStrLn (toCostring (prettyInfer (infer [] t)))
+  putStrLn (prettyInfer (infer [] t))
