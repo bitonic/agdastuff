@@ -261,8 +261,7 @@ module Exercise2-2 where
   lem-!-tab f fzero    = refl
   lem-!-tab f (fsuc i) = lem-!-tab (f ∘ fsuc) i
 
-  vec-∷-≡ : ∀ {A n} {xs : Vec A n}{ys : Vec A n}{x : A} →
-            xs ≡ ys → (x ∷ xs) ≡ (x ∷ ys)
+  vec-∷-≡ : ∀ {A n} {xs ys : Vec A n}{x : A} → xs ≡ ys → (x ∷ xs) ≡ (x ∷ ys)
   vec-∷-≡ refl = refl
 
   lem-tab-! : ∀ {A n} (xs : Vec A n) → tabulate (_!_ xs) ≡ xs
