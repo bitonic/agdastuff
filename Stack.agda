@@ -39,8 +39,13 @@ add (x ∷ y ∷ xs) = (x + y) ∷ xs
 
 infixr 1 _>>_
 
-_>>_ : ∀ {a b c} → (a => b) → (b => c) → a => c
-_>>_ a b = b ∘ a
+_>>_ : ∀ {ts}
+       {A : Stack ts → Set₁}
+       {B : {s : Stack ts} → A s → Set₁} →
+       (f : (s : Stack ts) → A s) →
+       (∀ {s₁} (s₂ : A s₁) → B s₂) →
+       ((x : Stack ts) → B (f x))
+f >> g = λ x → g (f x)
 
 test : ∀ {ts} → ts => ℕ ∷ ts
 test = push 1 >> push 2 >> add
@@ -59,5 +64,5 @@ then_else_ : ∀ {ts} {f : Bool → List Set} →
 then_else_ t e (true  ∷ s) = t s
 then_else_ t e (false ∷ s) = e s
 
-test2 : ∀ {ts x y} → (x ∷ y ∷ ts) => ts
-test2 = drop ∘ add ∘ push 3 ∘ push 1 ∘ push 2 ∘ push 3
+test₂ : ∀ {ts x y} → (x ∷ y ∷ ts) => ts
+test₂ = push 3 >> push 2 >> push 1 >> push 3 >> add >> drop

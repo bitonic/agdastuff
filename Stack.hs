@@ -8,6 +8,7 @@
            , MultiParamTypeClasses
            , FlexibleInstances
            , ScopedTypeVariables
+           , CPP
  #-}
 
 import Prelude hiding (drop)
@@ -79,3 +80,11 @@ add _             = error "This won't happen"
 
 test2 :: forall (tys :: [*]) a b . (a ': b ': tys) :=> tys
 test2 = drop . add . push three . push one . push two . push three
+
+data FoldN (n :: Nat) ty (tys1 :: [*]) (tys2 :: [*]) where
+    FBase   :: FoldN zero ty tys tys
+    FInduct :: FoldN n ty tys1 tys2 -> FoldN (Suc n) ty (ty ': tys1) tys2
+
+-- foldN :: forall (n :: Nat) (a :: *) (tys1 :: [*]) (tys2 :: [*])
+--          (f :: * -> * -> *) .
+--          FInduct n 
