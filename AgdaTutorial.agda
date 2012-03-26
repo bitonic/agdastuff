@@ -28,10 +28,10 @@ module Nat where
   zero  + m = m
   suc n + m = suc (n + m)
 
-  _×_ : ℕ → ℕ → ℕ
-  zero     × _ = zero
-  suc zero × m = m
-  suc n    × m = n + (n × m)
+  _*_ : ℕ → ℕ → ℕ
+  zero     * _ = zero
+  suc zero * m = m
+  suc n    * m = n + (n * m)
 
   identity : (A : Set) → A → A
   identity A x = x
@@ -109,8 +109,8 @@ module Fin where
   open Nat
 
   data Fin : ℕ → Set where
-    fzero : {n : ℕ} → Fin (suc n)
-    fsuc  : {n : ℕ} → Fin n → Fin (suc n)
+    zero : {n : ℕ} → Fin (suc n)
+    suc  : {n : ℕ} → Fin n → Fin (suc n)
 
   data Empty : Set where
     empty : Fin zero → Empty
@@ -132,12 +132,12 @@ module Vec where
 
   _!_ : {n : ℕ}{A : Set} → Vec A n → Fin n → A
   []       ! ()
-  (x ∷ xs) ! fzero    = x
-  (x ∷ xs) ! (fsuc i) = xs ! i
+  (x ∷ xs) ! zero    = x
+  (x ∷ xs) ! (suc i) = xs ! i
 
   tabulate : {n : ℕ}{A : Set} → (Fin n → A) → Vec A n
   tabulate {zero}  f = []
-  tabulate {suc n} f = f fzero ∷ tabulate (f ∘ fsuc)
+  tabulate {suc n} f = f zero ∷ tabulate (f ∘ suc)
 
 data Image_∋_ {A B : Set}(f : A → B) : B → Set where
   im : (x : A) → Image f ∋ f x
@@ -228,10 +228,10 @@ record Monad (M : Set → Set) : Set1 where
     _>>=_  : {A B : Set} → M A → (A → M B) → M B
 
   mapM : {A B : Set} → (A → M B) → List A → M (List B)
-  mapM f []        = return []
+  mapM f []       = return []
   mapM f (x ∷ xs) = f x       >>= \y →
-                     mapM f xs >>= \ys →
-                     return (y ∷ ys)
+                    mapM f xs >>= \ys →
+                    return (y ∷ ys)
 
 module Exercise2-1 where
   open Vec
@@ -258,8 +258,8 @@ module Exercise2-2 where
   open Fin
 
   lem-!-tab : ∀ {A n} (f : Fin n → A)(i : Fin n) → (tabulate f ! i) ≡ f i
-  lem-!-tab f fzero    = refl
-  lem-!-tab f (fsuc i) = lem-!-tab (f ∘ fsuc) i
+  lem-!-tab f zero    = refl
+  lem-!-tab f (suc i) = lem-!-tab (f ∘ suc) i
 
   vec-∷-≡ : ∀ {A n} {xs ys : Vec A n}{x : A} → xs ≡ ys → (x ∷ xs) ≡ (x ∷ ys)
   vec-∷-≡ refl = refl
@@ -319,23 +319,20 @@ module Exercise2-3 where
 module Views where
   open import Data.Nat
 
-  _×_ : ℕ → ℕ → ℕ
-  _×_ = _*_
-
   data Parity : ℕ → Set where
-    even : (k : ℕ) → Parity (k × 2)
-    odd  : (k : ℕ) → Parity (1 + k × 2)
+    even : (k : ℕ) → Parity (k * 2)
+    odd  : (k : ℕ) → Parity (1 + k * 2)
 
   parity : (n : ℕ) → Parity n
   parity zero = even zero
   parity (suc n) with parity n
-  parity (suc .(k × 2))     | even k = odd k
-  parity (suc .(1 + k × 2)) | odd k  = even (suc k)
+  parity (suc .(k * 2))     | even k = odd k
+  parity (suc .(1 + k * 2)) | odd k  = even (suc k)
 
   half : ℕ → ℕ
   half n with parity n
-  half .(k × 2)     | even k = k
-  half .(1 + k × 2) | odd k  = k
+  half .(k * 2)     | even k = k
+  half .(1 + k * 2) | odd k  = k
 
   open import Data.List
   open import Data.Bool renaming (T to isTrue)
@@ -479,7 +476,7 @@ module Exercises3-1 where
   compare (suc .(m + suc k)) (suc m)            | more k = more k
 
   difference : ℕ → ℕ → ℕ
-  difference n m with compare n m
+  difference n            m with compare n m
   difference n            .n           | same   = zero
   difference n            .(n + suc k) | less k = zero
   difference .(m + suc k) m            | more k = suc k

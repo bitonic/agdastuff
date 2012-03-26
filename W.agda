@@ -8,6 +8,9 @@ open import Data.Empty
 data W (A : Set)(B : A → Set) : Set₁ where
   node : (a : A) → (B a → W A B) → W A B
 
+Pair : (A : Set) → (B : A → Set) → Set₁
+Pair = {! !}
+
 Tree : (A : Set) → Set₁
 Tree A = W (⊤ ⊎ A) f
   where
@@ -51,3 +54,12 @@ flatten (node (inj₂ x) f) =
 map : ∀ {A B} → (A → B) → Tree A → Tree B
 map f (node (inj₂ x) g) = node (inj₂ (f x)) (map f ∘ g)
 map f t                 = null
+
+Bool : Set₁
+Bool = W (⊤ ⊎ ⊤) (λ _ → ⊥)
+
+true : Bool
+true = node (inj₁ _) ⊥-elim
+
+false : Bool
+false = node (inj₂ _) ⊥-elim
