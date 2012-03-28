@@ -55,7 +55,7 @@ mutual
   [ t ▻ f ] = Σ [ t ] f
 
 Σ₀ : (A : Set) → Telescope
-Σ₀ A = ε ▻ (const A)
+Σ₀ A = ε ▻ (λ ⊤ → A)
 
 Σ₁ : (A : Set) (B : A → Set) → Telescope
 Σ₁ A B = Σ₀ A ▻ (B ∘ Σ.proj₂)
