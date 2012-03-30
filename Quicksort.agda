@@ -6,7 +6,6 @@ open import Data.Nat using (ℕ; zero; suc; _≤_; z≤n; s≤s; _+_; _>_)
 open import Data.Nat.Properties using (≤-step)
 open import Data.List hiding (filter)
 open import Data.Sum
-open import Data.Product using (Σ; _,_)
 open import Data.Bool using (Bool; true; false; not; _∧_; _∨_; if_then_else_)
                       renaming (_≟_ to _Bool≟_)
 open import Data.Unit using (⊤)
@@ -46,49 +45,49 @@ eq n m = lesseq n m ∧ lesseq m n
 
 filter : {A : Set} → (A → Bool) → List A → List A
 filter _ []       = []
-filter p (x ∷ xs) with p x
-...               | true  = x ∷ filter p xs
-...               | false = filter p xs
+filter p (x ∷ l) with p x
+...              | true  = x ∷ filter p l
+...              | false = filter p l
 
-length-filter : ∀ {A} (n : ℕ) (xs : List A)
-                (p₁ : length xs ≤ n)
-                (p₂ : A → Bool) → (length (filter p₂ xs) ≤ n)
-length-filter n       []       p₁       p₂ = z≤n
-length-filter 0       (_ ∷ _)  ()       p₂
-length-filter (suc n) (x ∷ xs) (s≤s p₁) p₂ with p₂ x
-...                                        | true  = s≤s (length-filter n xs p₁ p₂)
-...                                        | false = ≤-step (length-filter n xs p₁ p₂)
+length-filter : ∀ {A} (n : ℕ) (l : List A)
+                (p₁ : length l ≤ n)
+                (p₂ : A → Bool) → (length (filter p₂ l) ≤ n)
+length-filter n       []      p₁       p₂ = z≤n
+length-filter 0       (_ ∷ _) ()       p₂
+length-filter (suc n) (x ∷ l) (s≤s p₁) p₂ with p₂ x
+...                                       | true  = s≤s (length-filter n l p₁ p₂)
+...                                       | false = ≤-step (length-filter n l p₁ p₂)
 
 qsort₁ : (n : ℕ) (l : List ℕ) → (length l ≤ n) → List ℕ
-qsort₁ n       []       p = []
+qsort₁ n       []       p      = []
 qsort₁ 0       (_ ∷ _)  ()
-qsort₁ (suc n) (x ∷ xs) (s≤s p) =
-  qsort₁ n (filter (lesseq₁ x) xs) (length-filter n xs p (lesseq₁ x)) ++
+qsort₁ (suc n) (x ∷ l) (s≤s p) =
+  qsort₁ n (filter (lesseq₁ x) l) (length-filter n l p (lesseq₁ x)) ++
   [ x ] ++
-  qsort₁ n (filter (greater₁ x) xs) (length-filter n xs p (greater₁ x))
+  qsort₁ n (filter (greater₁ x) l) (length-filter n l p (greater₁ x))
 
 ≤-refl : ∀ {n} → n ≤ n
 ≤-refl {0}     = z≤n
 ≤-refl {suc n} = s≤s (≤-refl)
 
 qsort : List ℕ → List ℕ
-qsort xs = qsort₁ (length xs) xs ≤-refl
+qsort l = qsort₁ (length l) l ≤-refl
 
 sorted : List ℕ → Set
-sorted []            = ⊤
-sorted (x ∷ xs) with xs
-...                  | y ∷ ys = (x ≤ y) × sorted xs
-...                  | []     = ⊤
+sorted []      = ⊤
+sorted (x ∷ l) with l
+...            | y ∷ m = (x ≤ y) × sorted l
+...            | []    = ⊤
 
 occs : ℕ → List ℕ → ℕ
-occs _ []       = 0
-occs n (m ∷ ns) with eq n m
-...             | true  = 1 + occs n ns
-...             | false = occs n ns
+occs _ []      = 0
+occs n (m ∷ l) with eq n m
+...            | true  = 1 + occs n l
+...            | false = occs n l
 
 mem : {A : Set} → A → List A → Set
-mem _ []       = ⊥
-mem n (m ∷ ns) = (n ≡ m) ⊎ mem n ns
+mem _ []      = ⊥
+mem n (m ∷ l) = (n ≡ m) ⊎ mem n l
 
 perm : List ℕ → List ℕ → Set
 perm l₁ l₂ = ∀ (n : ℕ) → occs n l₁ ≡ occs n l₂
@@ -176,8 +175,13 @@ mem-occs n (m ∷ l) with eq n m | inspect (eq n) m
      ; (inj₂ memnl) → Product.proj₁ (mem-occs n l) memnl}) ,
   λ occs>0 → inj₂ (Product.proj₂ (mem-occs n l) occs>0)
 
-perm-mem : (l l' : List ℕ) → perm l l' → (x : ℕ) → (mem x l ⇔ mem x l')
-perm-mem l l' p x = {! !}
+occs-≡ : (l₁ l₂ : List ℕ) → perm l₁ l₂ → (x : ℕ) → occs x l₁ > 0 → occs x l₂ > 0
+occs-≡ l₁ l₂ p x occ = {! !}
+
+perm-mem : (l₁ l₂ : List ℕ) → perm l₁ l₂ → (x : ℕ) → (mem x l₁ ⇔ mem x l₂)
+perm-mem l₁ l₂ p x with mem-occs x l₁ | mem-occs x l₂
+perm-mem l₁ l₂ p x | (m₁ , occ₁) | (m₂ , occ₂) =
+  (λ m → {! !}) , (λ m → {! !})
 
 occs-++ : (a : ℕ) (l m : List ℕ) → (occs a (l ++ m) ≡ occs a l + occs a m)
 occs-++ a []      m = refl

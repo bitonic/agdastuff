@@ -29,7 +29,7 @@ _!_ : ∀ {A} → Stream A → ℕ → A
 (x ∷ _)  ! 0       = x
 (_ ∷ xs) ! (suc n) = (♭ xs) ! n
 
--- Merged two ordered lists free of duplicates
+-- Merge two ordered lists free of duplicates
 merge : Stream ℕ → Stream ℕ → Stream ℕ
 merge (x ∷ xs) (y ∷ ys) with x ≟ y | x ≤? y
 ... | yes _ | _     = x ∷ ♯ (merge (♭ xs) (♭ ys))
@@ -41,3 +41,4 @@ hammings = let twos   = iterate (_*_ 2) 1
                threes = iterate (_*_ 3) 1
                fives  = iterate (_*_ 5) 1
            in  merge twos (merge threes fives)
+
