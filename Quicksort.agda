@@ -47,8 +47,8 @@ eq n m = lesseq n m ∧ lesseq m n
 filter : {A : Set} → (A → Bool) → List A → List A
 filter _ []       = []
 filter p (x ∷ xs) with p x
-... | true  = x ∷ filter p xs
-... | false = filter p xs
+...               | true  = x ∷ filter p xs
+...               | false = filter p xs
 
 length-filter : ∀ {A} (n : ℕ) (xs : List A)
                 (p₁ : length xs ≤ n)
@@ -56,8 +56,8 @@ length-filter : ∀ {A} (n : ℕ) (xs : List A)
 length-filter n       []       p₁       p₂ = z≤n
 length-filter 0       (_ ∷ _)  ()       p₂
 length-filter (suc n) (x ∷ xs) (s≤s p₁) p₂ with p₂ x
-... | true  = s≤s (length-filter n xs p₁ p₂)
-... | false = ≤-step (length-filter n xs p₁ p₂)
+...                                        | true  = s≤s (length-filter n xs p₁ p₂)
+...                                        | false = ≤-step (length-filter n xs p₁ p₂)
 
 qsort₁ : (n : ℕ) (l : List ℕ) → (length l ≤ n) → List ℕ
 qsort₁ n       []       p = []
@@ -77,14 +77,14 @@ qsort xs = qsort₁ (length xs) xs ≤-refl
 sorted : List ℕ → Set
 sorted []            = ⊤
 sorted (x ∷ xs) with xs
-sorted (x ∷ xs) | y ∷ ys = (x ≤ y) × sorted xs
-sorted (x ∷ xs) | []     = ⊤
+...                  | y ∷ ys = (x ≤ y) × sorted xs
+...                  | []     = ⊤
 
 occs : ℕ → List ℕ → ℕ
 occs _ []       = 0
 occs n (m ∷ ns) with eq n m
-... | true  = 1 + occs n ns
-... | false = occs n ns
+...             | true  = 1 + occs n ns
+...             | false = occs n ns
 
 mem : {A : Set} → A → List A → Set
 mem _ []       = ⊥
@@ -158,7 +158,7 @@ mem-filter-greater l a x p = greater-> x a (mem-filter (greater₁ a) l x p)
 ¬eq-≢ {suc n} {suc m} () p₂ | true  | _
 ¬eq-≢ {suc n} {suc m} p₁ p₂ | false | [ eq ]≡ = (¬eq-≢ eq) (≡-pred p₂)
 
-eq-≡ : ∀ {n m b} → (eq n m) ≡ b → if b then n ≡ m else n ≢ m
+eq-≡ : ∀ {n m b} → eq n m ≡ b → if b then n ≡ m else n ≢ m
 eq-≡ {zero}  {zero}  {true}_    = refl
 eq-≡ {zero}  {suc n} {true}  ()
 eq-≡ {suc n} {zero}  {true}  ()
@@ -170,8 +170,8 @@ eq-≡ {n}     {m}     {false} p = ¬eq-≢ p
 mem-occs : (x : ℕ) (l : List ℕ) → (mem x l ⇔ occs x l > 0)
 mem-occs x []      = ⊥-elim , λ()
 mem-occs n (m ∷ l) with eq n m | inspect (eq n) m
-mem-occs n (m ∷ l) | true  | [ eq ]≡ = const (s≤s z≤n) , const (inj₁ (eq-≡ eq))
-mem-occs n (m ∷ l) | false | [ eq ]≡ =
+...                | true  | [ eq ]≡ = const (s≤s z≤n) , const (inj₁ (eq-≡ eq))
+...                | false | [ eq ]≡ =
   (λ { (inj₁ eq₁)   → ⊥-elim (eq-≡ eq eq₁)
      ; (inj₂ memnl) → Product.proj₁ (mem-occs n l) memnl}) ,
   λ occs>0 → inj₂ (Product.proj₂ (mem-occs n l) occs>0)
@@ -182,14 +182,14 @@ perm-mem l l' p x = {! !}
 occs-++ : (a : ℕ) (l m : List ℕ) → (occs a (l ++ m) ≡ occs a l + occs a m)
 occs-++ a []      m = refl
 occs-++ a (x ∷ l) m with occs-++ a l m | eq a x
-occs-++ a (x ∷ l) m | occ≡ | true  = cong suc occ≡
-occs-++ a (x ∷ l) m | occ≡ | false = occ≡
+...                 | occ≡ | true  = cong suc occ≡
+...                 | occ≡ | false = occ≡
 
 perm-++₁ : (l m x : List ℕ) (a : ℕ) → perm (l ++ m) x →
            perm (l ++ [ a ] ++ m) (a ∷ x)
 perm-++₁ []      m x a p n with p n | eq n a
-perm-++₁ []      m x a p n | p₁ | true  = cong suc p₁
-perm-++₁ []      m x a p n | p₁ | false = p₁
+...                        | p₁ | true  = cong suc p₁
+...                        | p₁ | false = p₁
 perm-++₁ (y ∷ l) m x a p n = {! !}
 
 perm-++₂ : (l l' m m' : List ℕ) → perm l l' × perm m m' → perm (l ++ m) (l' ++ m')
