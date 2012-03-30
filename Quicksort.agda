@@ -2,7 +2,7 @@ module Quicksort where
 
 open import Function
 open import Data.Nat
-            using (ℕ; zero; suc; _≤_; z≤n; s≤s; _+_; _>_)
+            using (ℕ; zero; suc; _≤_; z≤n; s≤s; _+_; _>_; pred)
             renaming (_≟_ to _ℕ≟_)
 open import Data.Nat.Properties using (≤-step)
 open import Data.List hiding (filter)
@@ -197,8 +197,30 @@ perm-++₁ []      m x a p n with p n | eq n a
 ...                        | p₁ | false = p₁
 perm-++₁ (y ∷ l) m x a p n = {! !}
 
-perm-++₂ : (l l' m m' : List ℕ) → perm l l' × perm m m' → perm (l ++ m) (l' ++ m')
-perm-++₂ l l' m m' (pl , pm) = {! !}
+eq-suc : (m n : ℕ) → eq m n ≡ true → eq (suc m) (suc n) ≡ true
+eq-suc zero    zero    _ = refl
+eq-suc zero    (suc _) ()
+eq-suc (suc _) zero    ()
+eq-suc (suc m) (suc n) p = eq-suc m n p
+
+≡→eq : (m n : ℕ) → m ≡ n → eq m n ≡ true
+≡→eq zero     zero    _ = refl
+≡→eq zero    (suc _) ()
+≡→eq (suc _) zero    ()
+≡→eq (suc m) (suc n) p  = eq-suc m n (≡→eq m n (cong pred p))
+
+perm-[] : (l₁ l₂ : List ℕ) → perm l₁ l₂ → l₁ ≡ [] → l₂ ≡ []
+perm-[] []       []       p ≡[] = refl
+perm-[] []       (x ∷ l₂) p ≡[] with p x
+perm-[] []       (x ∷ l₂) p ≡[] | occs≡0 with eq x x | ≡→eq x x refl
+perm-[] []       (x ∷ l₂) p ≡[] | () | ._ | refl
+perm-[] (x ∷ l₁) l₂       p ()
+
+perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
+           perm (l₁ ++ m₁) (l₂ ++ m₂)
+perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] [] l₂ pl refl
+perm-++₂ []       .[] m₁ m₂ pl pm n | refl = pm n
+perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n = {! !}
 
 perm-filter : (l : List ℕ) (a : ℕ) →
               perm l (filter (lesseq₁ a) l ++ filter (greater₁ a) l)
