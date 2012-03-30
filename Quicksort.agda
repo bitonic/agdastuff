@@ -93,23 +93,33 @@ mem n (m ∷ ns) = (n ≡ m) ⊎ mem n ns
 perm : List ℕ → List ℕ → Set
 perm l₁ l₂ = ∀ (n : ℕ) → occs n l₁ ≡ occs n l₂
 
+≤-suc : ∀ {n m} → suc n ≤ m → n ≤ m
+≤-suc {n}     {zero}  ()
+≤-suc {zero}  {m}     _       = z≤n
+≤-suc {suc n} {suc m} (s≤s p) = s≤s (≤-suc p)
+
 sorted₁ : (l m : List ℕ) (a : ℕ) →
           sorted l → sorted m →
           ((b : ℕ) → mem b l → b ≤ a) →
-          ((b : ℕ) → mem b m → a ≤ b) →
+          ((b : ℕ) → mem b m → b > a) →
           sorted (l ++ [ a ] ++ m)
-sorted₁ []      []      a sl         sm a≥l a≤m = _
-sorted₁ []      (n ∷ m) a sl         sm a≥l a≤m = a≤m n (inj₁ refl) , sm
-sorted₁ (n ∷ l) m       a sl         sm a≥l a≤m with l
-sorted₁ (n ∷ l) m       a (n≤b , sl) sm a≥l a≤m | (b ∷ l') =
-  n≤b , sorted₁ (b ∷ l') m a sl sm (λ x → a≥l x ∘ inj₂) a≤m
-sorted₁ (n ∷ l) m       a ⊤          sm a≥l a≤m | []       =
-  a≥l n (inj₁ refl) , sorted₁ [] m a _ sm (λ _ → ⊥-elim) a≤m
+sorted₁ []      []      a sl         sm a≥l m>a = _
+sorted₁ []      (n ∷ m) a sl         sm a≥l m>a = ≤-suc (m>a n (inj₁ refl)) , sm
+sorted₁ (n ∷ l) m       a sl         sm a≥l m>a with l
+sorted₁ (n ∷ l) m       a (n≤b , sl) sm a≥l m>a | (b ∷ l') =
+  n≤b , sorted₁ (b ∷ l') m a sl sm (λ x → a≥l x ∘ inj₂) m>a
+sorted₁ (n ∷ l) m       a ⊤          sm a≥l m>a | []       =
+  a≥l n (inj₁ refl) , sorted₁ [] m a _ sm (λ _ → ⊥-elim) m>a
 
 lesseq-≤ : (x y : ℕ) → (lesseq x y ≡ true) → x ≤ y
 lesseq-≤ zero    y       refl = z≤n
 lesseq-≤ (suc x) zero    ()
 lesseq-≤ (suc x) (suc y) p    = s≤s (lesseq-≤ x y p)
+
+greater-> : (x y : ℕ) → (greater x y ≡ true) → x > y
+greater-> zero    y       ()
+greater-> (suc x) zero    refl = s≤s z≤n
+greater-> (suc x) (suc y) p    = s≤s (greater-> x y p)
 
 lesseq-⊎-greater : (x y : ℕ) → (lesseq x y ≡ true ⊎ greater x y ≡ true)
 lesseq-⊎-greater zero    y       = inj₁ refl
@@ -132,6 +142,10 @@ mem-filter p (y ∷ l) x  m           | false | _       = mem-filter p l x m
 mem-filter-lesseq : (l : List ℕ) (a x : ℕ) →
                     mem x (filter (lesseq₁ a) l) → x ≤ a
 mem-filter-lesseq l a x p = lesseq-≤ x a (mem-filter (lesseq₁ a) l x p)
+
+mem-filter-greater : (l : List ℕ) (a x : ℕ) →
+                    mem x (filter (greater₁ a) l) → x > a
+mem-filter-greater l a x p = greater-> x a (mem-filter (greater₁ a) l x p)
 
 ≡-pred : ∀ {n m} → suc n ≡ suc m → n ≡ m
 ≡-pred refl = refl
@@ -171,19 +185,12 @@ occs-++ a (x ∷ l) m with occs-++ a l m | eq a x
 occs-++ a (x ∷ l) m | occ≡ | true  = cong suc occ≡
 occs-++ a (x ∷ l) m | occ≡ | false = occ≡
 
-perm-++₃ : (l m x : List ℕ) (a : ℕ) → perm (a ∷ l ++ m) x →
-           perm (l ++ a ∷ m) x
-perm-++₃ = {! !}
-
 perm-++₁ : (l m x : List ℕ) (a : ℕ) → perm (l ++ m) x →
            perm (l ++ [ a ] ++ m) (a ∷ x)
 perm-++₁ []      m x a p n with p n | eq n a
 perm-++₁ []      m x a p n | p₁ | true  = cong suc p₁
 perm-++₁ []      m x a p n | p₁ | false = p₁
-perm-++₁ (y ∷ l) m x a p n with perm-++₃ l m x y p
-perm-++₁ (y ∷ l) m x a p n | p₁ with p₁ n
-perm-++₁ (y ∷ l) m x a p n | p₁ | p₂ = {! !}
-
+perm-++₁ (y ∷ l) m x a p n = {! !}
 
 perm-++₂ : (l l' m m' : List ℕ) → perm l l' × perm m m' → perm (l ++ m) (l' ++ m')
 perm-++₂ l l' m m' (pl , pm) = {! !}
@@ -192,25 +199,12 @@ perm-filter : (l : List ℕ) (a : ℕ) →
               perm l (filter (lesseq₁ a) l ++ filter (greater₁ a) l)
 perm-filter l a = {! !}
 
-qsort₁-length : (n : ℕ) (l : List ℕ) → (p : length l ≤ n) →
-                (length (qsort₁ n l p) ≤ n)
-qsort₁-length _ []      _ = z≤n
-qsort₁-length n (x ∷ l) p = {! !}
-
 qsort₁-correct : (m : ℕ) (l : List ℕ) (p : length l ≤ m) →
                  (sorted (qsort₁ m l p) × perm l (qsort₁ m l p))
 qsort₁-correct 0       []      p       = _ , λ _ → refl
 qsort₁-correct 0       (_ ∷ _) ()
 qsort₁-correct (suc m) []      p       = _ , λ _ → refl
-qsort₁-correct (suc m) (a ∷ l) (s≤s p)
-  with qsort₁ m (filter (lesseq a) l) (length-filter m l p (lesseq a)) |
-       qsort₁-length m (filter (lesseq a) l) (length-filter m l p (lesseq a)) |
-       qsort₁ m (filter (greater a) l) (length-filter m l p (greater a)) |
-       qsort₁-length m (filter (greater a) l) (length-filter m l p (greater a))
-qsort₁-correct (suc m) (a ∷ l) (s≤s p) | l₁ | p₁ | l₂ | p₂
-  with qsort₁-correct m l₁ p₁ | qsort₁-correct m l₂ p₂
-qsort₁-correct (suc m) (a ∷ l) (s≤s p) | l₁ | p₁ | l₂ | p₂ |
-               (sl₁ , pl₁) | (sl₂ , pl₂) = {! !}
+qsort₁-correct (suc m) (a ∷ l) (s≤s p) = {! !}
 
 qsort-correct : (l : List ℕ) → (sorted (qsort l) × perm l (qsort l))
 qsort-correct = {! !}
