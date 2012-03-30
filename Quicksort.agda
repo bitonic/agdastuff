@@ -1,17 +1,20 @@
 module Quicksort where
 
 open import Function
-open import Data.Nat using (ℕ; zero; suc; _≤_; z≤n; s≤s; _+_; _>_)
-                     renaming (_≟_ to _ℕ≟_)
+open import Data.Nat
+            using (ℕ; zero; suc; _≤_; z≤n; s≤s; _+_; _>_)
+            renaming (_≟_ to _ℕ≟_)
 open import Data.Nat.Properties using (≤-step)
 open import Data.List hiding (filter)
 open import Data.Sum
-open import Data.Bool using (Bool; true; false; not; _∧_; _∨_; if_then_else_)
-                      renaming (_≟_ to _Bool≟_)
+open import Data.Bool
+            using (Bool; true; false; not; _∧_; _∨_; if_then_else_)
+            renaming (_≟_ to _Bool≟_)
 open import Data.Unit using (⊤)
 open import Data.Empty using (⊥; ⊥-elim)
 open import Relation.Binary.PropositionalEquality
-            using (_≡_; _≢_; refl; inspect; cong) renaming ([_] to [_]≡)
+            using (_≡_; _≢_; refl; inspect; cong; sym; subst)
+            renaming ([_] to [_]≡)
 open import Relation.Nullary using (¬_; yes; no)
 
 infixr 2 _×_
@@ -175,13 +178,11 @@ mem-occs n (m ∷ l) with eq n m | inspect (eq n) m
      ; (inj₂ memnl) → Product.proj₁ (mem-occs n l) memnl}) ,
   λ occs>0 → inj₂ (Product.proj₂ (mem-occs n l) occs>0)
 
-occs-≡ : (l₁ l₂ : List ℕ) → perm l₁ l₂ → (x : ℕ) → occs x l₁ > 0 → occs x l₂ > 0
-occs-≡ l₁ l₂ p x occ = {! !}
-
 perm-mem : (l₁ l₂ : List ℕ) → perm l₁ l₂ → (x : ℕ) → (mem x l₁ ⇔ mem x l₂)
 perm-mem l₁ l₂ p x with mem-occs x l₁ | mem-occs x l₂
 perm-mem l₁ l₂ p x | (m₁ , occ₁) | (m₂ , occ₂) =
-  (λ m → {! !}) , (λ m → {! !})
+  (λ m → occ₂ (subst (flip _>_ 0) (p x) (m₁ m))) ,
+  (λ m → occ₁ (subst (flip _>_ 0) (sym (p x)) (m₂ m)))
 
 occs-++ : (a : ℕ) (l m : List ℕ) → (occs a (l ++ m) ≡ occs a l + occs a m)
 occs-++ a []      m = refl
