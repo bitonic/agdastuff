@@ -227,17 +227,12 @@ perm-[] (x ∷ l) p with p x
 perm-[] (x ∷ l) p | occs≡0 with eq x x | ≡→eq x x refl
 perm-[] (x ∷ l) p | () | ._ | refl
 
-perm-∷ : (l₁ l₂ : List ℕ) (x : ℕ) → perm l₁ l₂ → perm (x ∷ l₁) (x ∷ l₂)
-perm-∷ l₁ l₂ x p n with eq n x | inspect (eq n) x
-... | true  | [ eq ]≡ = cong suc (p n)
-... | false | [ eq ]≡ = p n
-
-perm-++₁ : (l m x : List ℕ) (a : ℕ) → perm x (l ++ m) →
+perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
            perm (a ∷ x) (l ++ [ a ] ++ m)
-perm-++₁ []      m x a p n with p n | eq n a
-...                        | p₁ | true  = cong suc p₁
-...                        | p₁ | false = p₁
-perm-++₁ (y ∷ l) m x a p n = {! !}
+perm-++₁ x []      m a p n with eq n a
+...                        | true  = cong suc (p n)
+...                        | false = p n
+perm-++₁ x (y ∷ l) m a p n = {! !}
 
 perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
            perm (l₁ ++ m₁) (l₂ ++ m₂)
@@ -250,9 +245,9 @@ perm-filter : (l : List ℕ) (a : ℕ) →
 perm-filter []      a = const refl
 perm-filter (x ∷ l) a with perm-filter l a | x lesseq a
 perm-filter (x ∷ l) a | p | true  =
-  perm-∷ l (filter (lesseq₁ a) l ++ filter (greater₁ a) l) x p
+  perm-++₁ l [] (filter (lesseq₁ a) l ++ filter (greater₁ a) l) x p
 perm-filter (x ∷ l) a | p | false =
-  perm-++₁ (filter (lesseq₁ a) l) (filter (greater₁ a) l) l x p
+  perm-++₁ l (filter (lesseq₁ a) l) (filter (greater₁ a) l) x p
 
 qsort₁-correct : (m : ℕ) (l : List ℕ) (p : length l ≤ m) →
                  (sorted (qsort₁ m l p) × perm l (qsort₁ m l p))
