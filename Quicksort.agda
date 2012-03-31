@@ -23,14 +23,14 @@ open import Relation.Nullary using (¬_; yes; no)
 infixr 2 _×_
 infix 3 _⇔_
 
-record Product (A : Set) (B : Set) : Set where
+record Prod (A : Set) (B : Set) : Set where
   constructor _,_
   field
     proj₁ : A
     proj₂ : B
 
 _×_ : (A B : Set) → Set
-_×_ = Product
+_×_ = Prod
 
 _⇔_ : Set → Set → Set
 A ⇔ B = (A → B) × (B → A)
@@ -190,8 +190,8 @@ mem-occs n (m ∷ l) with eq n m | inspect (eq n) m
 ...                | true  | [ eq ]≡ = const (s≤s z≤n) , const (inj₁ (eq-≡ eq))
 ...                | false | [ eq ]≡ =
   (λ { (inj₁ eq₁)   → ⊥-elim (eq-≡ eq eq₁)
-     ; (inj₂ memnl) → Product.proj₁ (mem-occs n l) memnl}) ,
-  λ occs>0 → inj₂ (Product.proj₂ (mem-occs n l) occs>0)
+     ; (inj₂ memnl) → Prod.proj₁ (mem-occs n l) memnl}) ,
+  λ occs>0 → inj₂ (Prod.proj₂ (mem-occs n l) occs>0)
 
 perm-mem : (l₁ l₂ : List ℕ) → perm l₁ l₂ → (x : ℕ) → (mem x l₁ ⇔ mem x l₂)
 perm-mem l₁ l₂ p x with mem-occs x l₁ | mem-occs x l₂
@@ -232,7 +232,9 @@ perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
 perm-++₁ x []      m a p n with eq n a
 ...                        | true  = cong suc (p n)
 ...                        | false = p n
-perm-++₁ x (y ∷ l) m a p n = {! !}
+perm-++₁ x (y ∷ l) m a p n with eq n y | inspect (eq n) y
+perm-++₁ x (y ∷ l) m a p n | true  | [ eq ]≡ = {! !}
+perm-++₁ x (y ∷ l) m a p n | false | [ eq ]≡ = {! !}
 
 perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
            perm (l₁ ++ m₁) (l₂ ++ m₂)
@@ -254,7 +256,26 @@ qsort₁-correct : (m : ℕ) (l : List ℕ) (p : length l ≤ m) →
 qsort₁-correct 0       []      p       = _ , λ _ → refl
 qsort₁-correct 0       (_ ∷ _) ()
 qsort₁-correct (suc m) []      p       = _ , λ _ → refl
-qsort₁-correct (suc m) (a ∷ l) (s≤s p) = {! !}
+qsort₁-correct (suc m) (a ∷ l) (s≤s p) with ({! !}) | ({! !})
+qsort₁-correct (suc m) (a ∷ l) (s≤s p) | p₁ | p₂
+  with qsort₁ m (filter (lesseq₁ a) l) p₁ | qsort₁ m (filter (greater₁ a) l) p₂ |
+       qsort₁-correct m (filter (lesseq₁ a) l) p₁ |
+       qsort₁-correct m (filter (greater₁ a) l) p₂ |
+       mem-filter-lesseq l a | mem-filter-greater l a
+qsort₁-correct (suc m) (a ∷ l) (s≤s p)
+  | p₁ | p₂ | l₁ | l₂ | (sl₁ , pl₁) | (sl₂ , pl₂) | ≤fil | >fil
+  with perm-mem (filter (lesseq₁ a) l) l₁ pl₁ |
+       perm-mem (filter (greater₁ a) l)  l₂ pl₂
+qsort₁-correct (suc m) (a ∷ l) (s≤s p)
+  | p₁ | p₂ | l₁ | l₂ | (sl₁ , pl₁) | (sl₂ , pl₂) | ≤fil | >fil | pm₁ | pm₂
+  with sorted₁ l₁ l₂ a sl₁ sl₂
+       (λ n m → ≤fil n (Prod.proj₂ (pm₁ n) m))
+       (λ n m → >fil n (Prod.proj₂ (pm₂ n) m))
+qsort₁-correct (suc m) (a ∷ l) (s≤s p)
+  | p₁ | p₂ | l₁ | l₂ | (sl₁ , pl₁) | (sl₂ , pl₂) | ≤fil | >fil | pm₁ | pm₂ | sort
+  = {! !}
+
+
 
 qsort-correct : (l : List ℕ) → (sorted (qsort l) × perm l (qsort l))
 qsort-correct = {! !}
