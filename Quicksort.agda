@@ -1,5 +1,6 @@
 module Quicksort where
 
+import Level
 open import Function
 open import Data.Nat
             using (ℕ; zero; suc; _≤_; z≤n; s≤s; _+_; _>_; pred)
@@ -12,8 +13,10 @@ open import Data.Bool
             renaming (_≟_ to _Bool≟_)
 open import Data.Unit using (⊤)
 open import Data.Empty using (⊥; ⊥-elim)
+open import Data.Product using (Σ; _,_)
+open import Relation.Binary using (IsEquivalence)
 open import Relation.Binary.PropositionalEquality
-            using (_≡_; _≢_; refl; inspect; cong; sym; subst)
+            using (_≡_; _≢_; refl; inspect; cong; sym; subst; trans)
             renaming ([_] to [_]≡)
 open import Relation.Nullary using (¬_; yes; no)
 
@@ -32,19 +35,31 @@ _×_ = Product
 _⇔_ : Set → Set → Set
 A ⇔ B = (A → B) × (B → A)
 
-lesseq : ℕ → ℕ → Bool
-lesseq 0       _       = true
-lesseq (suc n) 0       = false
-lesseq (suc n) (suc m) = lesseq n m
+_lesseq_ : ℕ → ℕ → Bool
+0 lesseq       _       = true
+(suc n) lesseq 0       = false
+(suc n) lesseq (suc m) = n lesseq m
 
-greater : ℕ → ℕ → Bool
-greater n = not ∘ lesseq n
+_greater_ : ℕ → ℕ → Bool
+_greater_ n = not ∘ _lesseq_ n
 
-lesseq₁ = flip lesseq
-greater₁ = flip greater
+lesseq₁ = flip _lesseq_
+greater₁ = flip _greater_
 
 eq : ℕ → ℕ → Bool
-eq n m = lesseq n m ∧ lesseq m n
+eq n m = n lesseq m ∧ m lesseq n
+
+eq-suc : (m n : ℕ) → eq m n ≡ true → eq (suc m) (suc n) ≡ true
+eq-suc zero    zero    _ = refl
+eq-suc zero    (suc _) ()
+eq-suc (suc _) zero    ()
+eq-suc (suc m) (suc n) p = eq-suc m n p
+
+≡→eq : (m n : ℕ) → m ≡ n → eq m n ≡ true
+≡→eq zero     zero    _ = refl
+≡→eq zero    (suc _) ()
+≡→eq (suc _) zero    ()
+≡→eq (suc m) (suc n) p  = eq-suc m n (≡→eq m n (cong pred p))
 
 filter : {A : Set} → (A → Bool) → List A → List A
 filter _ []       = []
@@ -113,22 +128,22 @@ sorted₁ (n ∷ l) m       a (n≤b , sl) sm a≥l m>a | (b ∷ l') =
 sorted₁ (n ∷ l) m       a ⊤          sm a≥l m>a | []       =
   a≥l n (inj₁ refl) , sorted₁ [] m a _ sm (λ _ → ⊥-elim) m>a
 
-lesseq-≤ : (x y : ℕ) → (lesseq x y ≡ true) → x ≤ y
+lesseq-≤ : (x y : ℕ) → (x lesseq y ≡ true) → x ≤ y
 lesseq-≤ zero    y       refl = z≤n
 lesseq-≤ (suc x) zero    ()
 lesseq-≤ (suc x) (suc y) p    = s≤s (lesseq-≤ x y p)
 
-greater-> : (x y : ℕ) → (greater x y ≡ true) → x > y
+greater-> : (x y : ℕ) → (x greater y ≡ true) → x > y
 greater-> zero    y       ()
 greater-> (suc x) zero    refl = s≤s z≤n
 greater-> (suc x) (suc y) p    = s≤s (greater-> x y p)
 
-lesseq-⊎-greater : (x y : ℕ) → (lesseq x y ≡ true ⊎ greater x y ≡ true)
+lesseq-⊎-greater : (x y : ℕ) → (x lesseq y ≡ true ⊎ x greater y ≡ true)
 lesseq-⊎-greater zero    y       = inj₁ refl
 lesseq-⊎-greater (suc x) zero    = inj₂ refl
 lesseq-⊎-greater (suc x) (suc y) = lesseq-⊎-greater x y
 
-¬-lesseq-×-greater : (x y : ℕ) → ¬ (lesseq x y ≡ true × greater x y ≡ true)
+¬-lesseq-×-greater : (x y : ℕ) → ¬ (x lesseq y ≡ true × x greater y ≡ true)
 ¬-lesseq-×-greater zero    y       (_ , ())
 ¬-lesseq-×-greater (suc x) zero    (() , _)
 ¬-lesseq-×-greater (suc x) (suc y) p        = ¬-lesseq-×-greater x y p
@@ -190,41 +205,54 @@ occs-++ a (x ∷ l) m with occs-++ a l m | eq a x
 ...                 | occ≡ | true  = cong suc occ≡
 ...                 | occ≡ | false = occ≡
 
-perm-++₁ : (l m x : List ℕ) (a : ℕ) → perm (l ++ m) x →
-           perm (l ++ [ a ] ++ m) (a ∷ x)
+perm-refl : {l : List ℕ} → perm l l
+perm-refl n = refl
+
+perm-sym : {n m : List ℕ} → perm n m → perm m n
+perm-sym p x = sym (p x)
+
+perm-trans : {l n m : List ℕ} → perm l n → perm n m → perm l m
+perm-trans p₁ p₂ n = trans (p₁ n) (p₂ n)
+
+perm-equivalence : IsEquivalence perm
+perm-equivalence = record
+  { refl  = perm-refl
+  ; sym   = perm-sym
+  ; trans = perm-trans
+  }
+
+perm-[] : (l : List ℕ) → perm [] l → l ≡ []
+perm-[] []      p = refl
+perm-[] (x ∷ l) p with p x
+perm-[] (x ∷ l) p | occs≡0 with eq x x | ≡→eq x x refl
+perm-[] (x ∷ l) p | () | ._ | refl
+
+perm-∷ : (l₁ l₂ : List ℕ) (x : ℕ) → perm l₁ l₂ → perm (x ∷ l₁) (x ∷ l₂)
+perm-∷ l₁ l₂ x p n with eq n x | inspect (eq n) x
+... | true  | [ eq ]≡ = cong suc (p n)
+... | false | [ eq ]≡ = p n
+
+perm-++₁ : (l m x : List ℕ) (a : ℕ) → perm x (l ++ m) →
+           perm (a ∷ x) (l ++ [ a ] ++ m)
 perm-++₁ []      m x a p n with p n | eq n a
 ...                        | p₁ | true  = cong suc p₁
 ...                        | p₁ | false = p₁
 perm-++₁ (y ∷ l) m x a p n = {! !}
 
-eq-suc : (m n : ℕ) → eq m n ≡ true → eq (suc m) (suc n) ≡ true
-eq-suc zero    zero    _ = refl
-eq-suc zero    (suc _) ()
-eq-suc (suc _) zero    ()
-eq-suc (suc m) (suc n) p = eq-suc m n p
-
-≡→eq : (m n : ℕ) → m ≡ n → eq m n ≡ true
-≡→eq zero     zero    _ = refl
-≡→eq zero    (suc _) ()
-≡→eq (suc _) zero    ()
-≡→eq (suc m) (suc n) p  = eq-suc m n (≡→eq m n (cong pred p))
-
-perm-[] : (l₁ l₂ : List ℕ) → perm l₁ l₂ → l₁ ≡ [] → l₂ ≡ []
-perm-[] []       []       p ≡[] = refl
-perm-[] []       (x ∷ l₂) p ≡[] with p x
-perm-[] []       (x ∷ l₂) p ≡[] | occs≡0 with eq x x | ≡→eq x x refl
-perm-[] []       (x ∷ l₂) p ≡[] | () | ._ | refl
-perm-[] (x ∷ l₁) l₂       p ()
-
 perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
            perm (l₁ ++ m₁) (l₂ ++ m₂)
-perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] [] l₂ pl refl
+perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] l₂ pl
 perm-++₂ []       .[] m₁ m₂ pl pm n | refl = pm n
 perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n = {! !}
 
 perm-filter : (l : List ℕ) (a : ℕ) →
               perm l (filter (lesseq₁ a) l ++ filter (greater₁ a) l)
-perm-filter l a = {! !}
+perm-filter []      a = const refl
+perm-filter (x ∷ l) a with perm-filter l a | x lesseq a
+perm-filter (x ∷ l) a | p | true  =
+  perm-∷ l (filter (lesseq₁ a) l ++ filter (greater₁ a) l) x p
+perm-filter (x ∷ l) a | p | false =
+  perm-++₁ (filter (lesseq₁ a) l) (filter (greater₁ a) l) l x p
 
 qsort₁-correct : (m : ℕ) (l : List ℕ) (p : length l ≤ m) →
                  (sorted (qsort₁ m l p) × perm l (qsort₁ m l p))
