@@ -256,7 +256,8 @@ qsort₁-correct : (m : ℕ) (l : List ℕ) (p : length l ≤ m) →
 qsort₁-correct 0       []      p       = _ , λ _ → refl
 qsort₁-correct 0       (_ ∷ _) ()
 qsort₁-correct (suc m) []      p       = _ , λ _ → refl
-qsort₁-correct (suc m) (a ∷ l) (s≤s p) with ({! !}) | ({! !})
+qsort₁-correct (suc m) (a ∷ l) (s≤s p)
+  with length-filter m l p (lesseq₁ a) | length-filter m l p (greater₁ a)
 qsort₁-correct (suc m) (a ∷ l) (s≤s p) | p₁ | p₂
   with qsort₁ m (filter (lesseq₁ a) l) p₁ | qsort₁ m (filter (greater₁ a) l) p₂ |
        qsort₁-correct m (filter (lesseq₁ a) l) p₁ |
@@ -273,9 +274,12 @@ qsort₁-correct (suc m) (a ∷ l) (s≤s p)
        (λ n m → >fil n (Prod.proj₂ (pm₂ n) m))
 qsort₁-correct (suc m) (a ∷ l) (s≤s p)
   | p₁ | p₂ | l₁ | l₂ | (sl₁ , pl₁) | (sl₂ , pl₂) | ≤fil | >fil | pm₁ | pm₂ | sort
-  = {! !}
-
-
+  = sort , perm-++₁ l l₁ l₂ a
+                    (perm-trans {l} {fil₁ ++ fil₂} {l₁ ++ l₂} (perm-filter l a)
+                                (perm-++₂ fil₁ l₁ fil₂ l₂ pl₁ pl₂))
+  where
+    fil₁ = filter (lesseq₁ a) l
+    fil₂ = filter (greater₁ a) l
 
 qsort-correct : (l : List ℕ) → (sorted (qsort l) × perm l (qsort l))
 qsort-correct = {! !}
