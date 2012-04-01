@@ -261,18 +261,18 @@ qsort₁-correct (suc m) (a ∷ l) (s≤s p) =
       fil₂  = filter (greater₁ a) l
       p₁    = length-filter m l p (lesseq₁ a)
       p₂    = length-filter m l p (greater₁ a)
-      l₁    = qsort₁ m (filter (lesseq₁ a) l) p₁
-      l₂    = qsort₁ m (filter (greater₁ a) l) p₂
-      slpl₁ = qsort₁-correct m (filter (lesseq₁ a) l) p₁
+      l₁    = qsort₁ m fil₁ p₁
+      l₂    = qsort₁ m fil₂ p₂
+      slpl₁ = qsort₁-correct m fil₁ p₁
       sl₁   = Prod.proj₁ slpl₁
       pl₁   = Prod.proj₂ slpl₁
-      slpl₂ = qsort₁-correct m (filter (greater₁ a) l) p₂
+      slpl₂ = qsort₁-correct m fil₂ p₂
       sl₂   = Prod.proj₁ slpl₂
       pl₂   = Prod.proj₂ slpl₂
       ≤fil  = mem-filter-lesseq l a
       >fil  = mem-filter-greater l a
-      pm₁   = perm-mem (filter (lesseq₁ a) l) l₁ pl₁
-      pm₂   = perm-mem (filter (greater₁ a) l)  l₂ pl₂
+      pm₁   = perm-mem fil₁ l₁ pl₁
+      pm₂   = perm-mem fil₂ l₂ pl₂
       sort  = sorted₁ l₁ l₂ a sl₁ sl₂
                       (λ n m → ≤fil n (Prod.proj₂ (pm₁ n) m))
                       (λ n m → >fil n (Prod.proj₂ (pm₂ n) m))
