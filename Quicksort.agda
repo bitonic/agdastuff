@@ -205,20 +205,20 @@ occs-++ a (x ∷ l) m with occs-++ a l m | eq a x
 ...                 | occ≡ | true  = cong suc occ≡
 ...                 | occ≡ | false = occ≡
 
-perm-refl : {l : List ℕ} → perm l l
-perm-refl n = refl
+perm-refl : (l : List ℕ) → perm l l
+perm-refl _ n = refl
 
-perm-sym : {n m : List ℕ} → perm n m → perm m n
-perm-sym p x = sym (p x)
+perm-sym : (n m : List ℕ) → perm n m → perm m n
+perm-sym _ _ p x = sym (p x)
 
-perm-trans : {l n m : List ℕ} → perm l n → perm n m → perm l m
-perm-trans p₁ p₂ n = trans (p₁ n) (p₂ n)
+perm-trans : (l n m : List ℕ) → perm l n → perm n m → perm l m
+perm-trans _ _ _ p₁ p₂ n = trans (p₁ n) (p₂ n)
 
 perm-equivalence : IsEquivalence perm
 perm-equivalence = record
-  { refl  = perm-refl
-  ; sym   = perm-sym
-  ; trans = perm-trans
+  { refl  = λ {l} → perm-refl l
+  ; sym   = λ {n} {m} → perm-sym n m
+  ; trans = λ {l} {n} {m} → perm-trans l n m
   }
 
 perm-[] : (l : List ℕ) → perm [] l → l ≡ []
@@ -249,10 +249,10 @@ perm-++₁ x []      m a p n with eq n a
 perm-++₁ x (y ∷ l) m a p n with perm-ind x l m y p
 perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) with perm-++₁ x₁ l m a p₁
 perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂
-  with perm-++₂ [ y ] [ y ] (a ∷ x₁) (l ++ a ∷ m) (perm-refl {[ y ]}) p₂ |
-       perm-++₂ [ a ] [ a ] x (y ∷ x₁) (perm-refl {[ a ]}) px₁
+  with perm-++₂ [ y ] [ y ] (a ∷ x₁) (l ++ a ∷ m) (perm-refl [ y ]) p₂ |
+       perm-++₂ [ a ] [ a ] x (y ∷ x₁) (perm-refl [ a ]) px₁
 perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂ | p₃ | p₄ =
-  perm-trans {a ∷ x} {a ∷ y ∷ x₁} {y ∷ l ++ a ∷ m} p₄
+  perm-trans (a ∷ x) (a ∷ y ∷ x₁) (y ∷ l ++ a ∷ m) p₄
              (perm-swap x₁ (y ∷ l ++ a ∷ m) y a p₃) n
 
 perm-filter : (l : List ℕ) (a : ℕ) →
@@ -288,7 +288,7 @@ qsort₁-correct (suc m) (a ∷ l) (s≤s p) =
                       (λ n m → ≤fil n (Prod.proj₂ (pm₁ n) m))
                       (λ n m → >fil n (Prod.proj₂ (pm₂ n) m))
   in sort , perm-++₁ l l₁ l₂ a
-                     (perm-trans {l} {fil₁ ++ fil₂} {l₁ ++ l₂} (perm-filter l a)
+                     (perm-trans l (fil₁ ++ fil₂) (l₁ ++ l₂) (perm-filter l a)
                                  (perm-++₂ fil₁ l₁ fil₂ l₂ pl₁ pl₂))
 
 qsort-correct : (l : List ℕ) → (sorted (qsort l) × perm l (qsort l))
