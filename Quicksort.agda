@@ -227,20 +227,33 @@ perm-[] (x ∷ l) p with p x
 perm-[] (x ∷ l) p | occs≡0 with eq x x | ≡→eq x x refl
 perm-[] (x ∷ l) p | () | ._ | refl
 
-perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
-           perm (a ∷ x) (l ++ [ a ] ++ m)
-perm-++₁ x []      m a p n with eq n a
-...                        | true  = cong suc (p n)
-...                        | false = p n
-perm-++₁ x (y ∷ l) m a p n with eq n y | inspect (eq n) y
-perm-++₁ x (y ∷ l) m a p n | true  | [ eq ]≡ = {! !}
-perm-++₁ x (y ∷ l) m a p n | false | [ eq ]≡ = {! !}
+perm-ind : (x l m : List ℕ) (y : ℕ) → perm x (y ∷ l ++ m) →
+           Σ (List ℕ) (λ x₁ → perm x₁ (l ++ m) × perm x (y ∷ x₁))
+perm-ind x l  m y p = {! !}
+
+perm-swap : (x l : List ℕ) (y z : ℕ) → perm (y ∷ z ∷ x) l →
+            perm (z ∷ y ∷ x) l
+perm-swap x l y z p = {! !}
 
 perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
            perm (l₁ ++ m₁) (l₂ ++ m₂)
 perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] l₂ pl
 perm-++₂ []       .[] m₁ m₂ pl pm n | refl = pm n
 perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n = {! !}
+
+perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
+           perm (a ∷ x) (l ++ [ a ] ++ m)
+perm-++₁ x []      m a p n with eq n a
+...                        | true  = cong suc (p n)
+...                        | false = p n
+perm-++₁ x (y ∷ l) m a p n with perm-ind x l m y p
+perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) with perm-++₁ x₁ l m a p₁
+perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂
+  with perm-++₂ [ y ] [ y ] (a ∷ x₁) (l ++ a ∷ m) (perm-refl {[ y ]}) p₂ |
+       perm-++₂ [ a ] [ a ] x (y ∷ x₁) (perm-refl {[ a ]}) px₁
+perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂ | p₃ | p₄ =
+  perm-trans {a ∷ x} {a ∷ y ∷ x₁} {y ∷ l ++ a ∷ m} p₄
+             (perm-swap x₁ (y ∷ l ++ a ∷ m) y a p₃) n
 
 perm-filter : (l : List ℕ) (a : ℕ) →
               perm l (filter (lesseq₁ a) l ++ filter (greater₁ a) l)
@@ -264,16 +277,14 @@ qsort₁-correct (suc m) (a ∷ l) (s≤s p) =
       l₁    = qsort₁ m fil₁ p₁
       l₂    = qsort₁ m fil₂ p₂
       slpl₁ = qsort₁-correct m fil₁ p₁
-      sl₁   = Prod.proj₁ slpl₁
       pl₁   = Prod.proj₂ slpl₁
       slpl₂ = qsort₁-correct m fil₂ p₂
-      sl₂   = Prod.proj₁ slpl₂
       pl₂   = Prod.proj₂ slpl₂
       ≤fil  = mem-filter-lesseq l a
       >fil  = mem-filter-greater l a
       pm₁   = perm-mem fil₁ l₁ pl₁
       pm₂   = perm-mem fil₂ l₂ pl₂
-      sort  = sorted₁ l₁ l₂ a sl₁ sl₂
+      sort  = sorted₁ l₁ l₂ a (Prod.proj₁ slpl₁) (Prod.proj₁ slpl₂)
                       (λ n m → ≤fil n (Prod.proj₂ (pm₁ n) m))
                       (λ n m → >fil n (Prod.proj₂ (pm₂ n) m))
   in sort , perm-++₁ l l₁ l₂ a
@@ -281,4 +292,4 @@ qsort₁-correct (suc m) (a ∷ l) (s≤s p) =
                                  (perm-++₂ fil₁ l₁ fil₂ l₂ pl₁ pl₂))
 
 qsort-correct : (l : List ℕ) → (sorted (qsort l) × perm l (qsort l))
-qsort-correct = {! !}
+qsort-correct l = qsort₁-correct (length l) l ≤-refl
