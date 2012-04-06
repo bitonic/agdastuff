@@ -227,9 +227,9 @@ perm-[] (x ∷ l) p with p x
 perm-[] (x ∷ l) p | occs≡0 with eq x x | ≡→eq x x refl
 perm-[] (x ∷ l) p | () | ._ | refl
 
-perm-ind : (x l m : List ℕ) (y : ℕ) → perm x (y ∷ l ++ m) →
-           Σ (List ℕ) (λ x₁ → perm x₁ (l ++ m) × perm x (y ∷ x₁))
-perm-ind x l  m y p = {! !}
+perm-ind : (x l : List ℕ) (y : ℕ) → perm x (y ∷ l) →
+           Σ (List ℕ) (λ x₁ → perm x₁ l × perm x (y ∷ x₁))
+perm-ind x l y p = {! !}
 
 perm-swap : (x l : List ℕ) (y z : ℕ) → perm (y ∷ z ∷ x) l →
             perm (z ∷ y ∷ x) l
@@ -240,13 +240,16 @@ perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m
 perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] l₂ pl
 perm-++₂ []       .[] m₁ m₂ pl pm n | refl = pm n
 perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n = {! !}
+--   with perm-ind pl | perm-ind pm
+-- perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n | (n₁ , (pn₁ , py₁)) | (n₂ , (pn₂ , py₂)) =
+--   {! !}
 
 perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
            perm (a ∷ x) (l ++ [ a ] ++ m)
 perm-++₁ x []      m a p n with eq n a
 ...                        | true  = cong suc (p n)
 ...                        | false = p n
-perm-++₁ x (y ∷ l) m a p n with perm-ind x l m y p
+perm-++₁ x (y ∷ l) m a p n with perm-ind x (l ++ m) y p
 perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) with perm-++₁ x₁ l m a p₁
 perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂
   with perm-++₂ [ y ] [ y ] (a ∷ x₁) (l ++ a ∷ m) (perm-refl [ y ]) p₂ |
