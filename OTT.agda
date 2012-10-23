@@ -60,15 +60,14 @@ mutual
   Eq ‘0’          ‘0’        = ‘⊤’
   Eq ‘1’          ‘1’        = ‘⊤’
   Eq ‘2’          ‘2’        = ‘⊤’
-  Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) = EqBinder S₀ T₀ S₁ T₁
-  Eq (‘Σ’ S₀ T₀) (‘Σ’ S₁ T₁) = EqBinder S₁ T₁ S₀ T₀
-  Eq (‘W’ S₀ T₀) (‘W’ S₁ T₁) = EqBinder S₀ T₀ S₁ T₁
+  Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) =
+    Eq S₁ S₀ ‘∧’ (‘∀’ S₁ (λ x₁ → ‘∀’ S₀ (λ x₀ → eq S₁ x₁ S₀ x₀ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
+  Eq (‘Σ’ S₀ T₀) (‘Σ’ S₁ T₁) =
+    Eq S₀ S₁ ‘∧’ (‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
+  Eq (‘W’ S₀ T₀) (‘W’ S₁ T₁) =
+    Eq S₀ S₁ ‘∧’ (‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₁ x₁) (T₀ x₀))))
   Eq  _           _          = ‘⊥’
 
-  EqBinder : (S₀ : ‘set’) → (〚 S₀ 〛 → ‘set’) → (S₁ : ‘set’) → (〚 S₁ 〛 → ‘set’) → ‘prop’
-  EqBinder S₀ T₀ S₁ T₁ =
-    Eq S₁ S₀ ‘∧’ (‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
-  
   eq : (S : ‘set’) → 〚 S 〛 → (T : ‘set’) → 〚 T 〛 → ‘prop’
   eq ‘0’ _  ‘0’ _  = ‘⊤’
   eq ‘1’ _  ‘1’ _  = ‘⊤’
@@ -79,8 +78,21 @@ mutual
 
 mutual
   coe : (S : ‘set’) (T : ‘set’) → 〚 ⌈ Eq S T ⌉ 〛 → 〚 S 〛 → 〚 T 〛
-  coe ‘0’ ‘0’ Q z = z
+  coe ‘0’          ‘0’         _         z        = z
+  coe ‘1’          ‘1’         _         u        = u
+  coe ‘2’          ‘2’         _         b        = b
+  coe (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) Q          f₀       = coeΠ S₀ T₀ S₁ T₁ Q f₀
+  coe (‘Σ’ S₀ T₀) (‘Σ’ S₁ T₁) (Qs , Qt) (s₀ , t₀) with coe S₀ S₁ Qs s₀ | coh S₀ S₁ Qs s₀
+  ... | s₁ | foo = s₁ , coe (T₀ s₀) (T₁ s₁) (Qt s₀ s₁ foo) t₀
+  coe (‘W’ S₀ T₀) (‘W’ S₁ T₁) (Qs , Qt) (s₀ ◃ f₀) = {! !}
   coe _   _   _ _ = {! !}
 
-  coh : (S : ‘set’) (T : ‘set’) (Q : 〚 ⌈ Eq S T ⌉ 〛) (s : 〚 S 〛) → 〚 ⌈ eq S s T (coe S T Q s) ⌉ 〛
+  coeΠ : (S₀ : ‘set’) (T₀ : 〚 S₀ 〛 → ‘set’) (S₁ : ‘set’) (T₁ : 〚 S₁ 〛 → ‘set’) →
+         〚 ⌈ Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) ⌉ 〛 → 〚 ‘Π’ S₀ T₀ 〛 →
+         (x : 〚 S₁ 〛) → 〚 T₁ x 〛
+  coeΠ S₀ T₀ S₁ T₁ (Qs , Qt) f₀ s₁ with coe S₁ S₀ Qs s₁ | coh S₁ S₀ Qs s₁
+  ... | s₀ | foo = coe (T₀ s₀) (T₁ s₁) (Qt s₁ s₀ foo) (f₀ s₀)
+
+  coh : (S : ‘set’) (T : ‘set’) (Q : 〚 ⌈ Eq S T ⌉ 〛) (s : 〚 S 〛) →
+        〚 ⌈ eq S s T (coe S T Q s) ⌉ 〛
   coh S T Q s = {! !}
