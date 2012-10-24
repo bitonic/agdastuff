@@ -4,9 +4,6 @@ open import Data.Nat
 
 data Empty : Set where
 
-⊥-elim : {A : Set} → Empty -> A
-⊥-elim ()
-
 record Unit : Set where
 
 data Bool : Set where
@@ -69,12 +66,14 @@ mutual
   Eq  _           _          = ‘⊥’
 
   eq : (S : ‘set’) → 〚 S 〛 → (T : ‘set’) → 〚 T 〛 → ‘prop’
-  eq ‘0’ _  ‘0’ _  = ‘⊤’
-  eq ‘1’ _  ‘1’ _  = ‘⊤’
-  eq ‘2’ tt ‘2’ tt = ‘⊤’
-  eq ‘2’ ff ‘2’ ff = ‘⊤’
-  eq ‘2’ _  ‘2’ _  = ‘⊥’
-  eq _   _ _   _ = {! !}
+  eq  ‘0’         _         ‘0’         _        = ‘⊤’
+  eq  ‘1’         _         ‘1’         _        = ‘⊤’
+  eq  ‘2’         tt        ‘2’         tt       = ‘⊤’
+  eq  ‘2’         ff        ‘2’         ff       = ‘⊤’
+  eq (‘Π’ S₀ T₀)  f₀       (‘Π’ S₁ T₁)  f₁       = {! !}
+  eq (‘Σ’ S₀ T₀) (s₀ , t₀) (‘Σ’ S₁ T₁) (s₁ , t₁) = {! !}
+  eq (‘W’ S₀ T₀) (s₀ ◃ f₀) (‘W’ S₁ T₁) (s₁ ◃ f₁) = {! !}
+  eq  _           _         _           _        = ‘⊥’
 
 mutual
   coe : (S : ‘set’) (T : ‘set’) → 〚 ⌈ Eq S T ⌉ 〛 → 〚 S 〛 → 〚 T 〛
@@ -84,8 +83,39 @@ mutual
   coe (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) Q          f₀       = coeΠ S₀ T₀ S₁ T₁ Q f₀
   coe (‘Σ’ S₀ T₀) (‘Σ’ S₁ T₁) (Qs , Qt) (s₀ , t₀) with coe S₀ S₁ Qs s₀ | coh S₀ S₁ Qs s₀
   ... | s₁ | foo = s₁ , coe (T₀ s₀) (T₁ s₁) (Qt s₀ s₁ foo) t₀
-  coe (‘W’ S₀ T₀) (‘W’ S₁ T₁) (Qs , Qt) (s₀ ◃ f₀) = {! !}
-  coe _   _   _ _ = {! !}
+  coe (‘W’ S₀ T₀) (‘W’ S₁ T₁) (Qs , Qt) (s₀ ◃ f₀) with coe S₀ S₁ Qs s₀ | coh S₀ S₁ Qs s₀
+  ... | s₁ | foo = s₁ ◃ (λ t₁ → coe (‘W’ S₀ T₀) (‘W’ S₁ T₁) (Qs , Qt)
+                                    (f₀ (coe (T₁ s₁) (T₀ s₀) (Qt s₀ s₁ foo) t₁)))
+  coe ‘0’           ‘1’        ()        _
+  coe ‘0’           ‘2’        ()        _
+  coe ‘0’          (‘Π’ _ _)   ()        _
+  coe ‘0’          (‘Σ’ _ _)   ()        _
+  coe ‘0’          (‘W’ _ _)   ()        _
+  coe ‘1’           ‘0’        ()        _
+  coe ‘1’           ‘2’        ()        _
+  coe ‘1’          (‘Π’ _ _)   ()        _
+  coe ‘1’          (‘Σ’ _ _)   ()        _
+  coe ‘1’          (‘W’ _ _)   ()        _
+  coe ‘2’           ‘0’        ()        _
+  coe ‘2’           ‘1’        ()        _
+  coe ‘2’          (‘Π’ _ _)   ()        _
+  coe ‘2’          (‘Σ’ _ _)   ()        _
+  coe ‘2’          (‘W’ _ _)   ()        _
+  coe (‘Π’ _ _)     ‘0’        ()        _
+  coe (‘Π’ _ _)     ‘1’        ()        _
+  coe (‘Π’ _ _)     ‘2’        ()        _
+  coe (‘Π’ _ _)    (‘Σ’ _ _)   ()        _
+  coe (‘Π’ _ _)    (‘W’ _ _)   ()        _
+  coe (‘Σ’ _ _)     ‘0’        ()        _
+  coe (‘Σ’ _ _)     ‘1’        ()        _
+  coe (‘Σ’ _ _)     ‘2’        ()        _
+  coe (‘Σ’ _ _)    (‘Π’ _ _)   ()        _
+  coe (‘Σ’ _ _)    (‘W’ _ _)   ()        _
+  coe (‘W’ _ _)     ‘0’        ()        _
+  coe (‘W’ _ _)     ‘1’        ()        _
+  coe (‘W’ _ _)     ‘2’        ()        _
+  coe (‘W’ _ _)    (‘Π’ _ _)   ()        _
+  coe (‘W’ _ _)    (‘Σ’ _ _)   ()        _
 
   coeΠ : (S₀ : ‘set’) (T₀ : 〚 S₀ 〛 → ‘set’) (S₁ : ‘set’) (T₁ : 〚 S₁ 〛 → ‘set’) →
          〚 ⌈ Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) ⌉ 〛 → 〚 ‘Π’ S₀ T₀ 〛 →
