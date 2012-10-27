@@ -70,9 +70,14 @@ mutual
   eq  ‘1’         _         ‘1’         _        = ‘⊤’
   eq  ‘2’         tt        ‘2’         tt       = ‘⊤’
   eq  ‘2’         ff        ‘2’         ff       = ‘⊤’
-  eq (‘Π’ S₀ T₀)  f₀       (‘Π’ S₁ T₁)  f₁       = {! !}
-  eq (‘Σ’ S₀ T₀) (s₀ , t₀) (‘Σ’ S₁ T₁) (s₁ , t₁) = {! !}
-  eq (‘W’ S₀ T₀) (s₀ ◃ f₀) (‘W’ S₁ T₁) (s₁ ◃ f₁) = {! !}
+  eq (‘Π’ S₀ T₀)  f₀       (‘Π’ S₁ T₁)  f₁       =
+    ‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ eq (T₀ x₀) (f₀ x₀) (T₁ x₁) (f₁ x₁)))
+  eq (‘Σ’ S₀ T₀) (s₀ , t₀) (‘Σ’ S₁ T₁) (s₁ , t₁) =
+    eq S₀ s₀ S₁ s₁ ‘∧’ eq (T₀ s₀) t₀ (T₁ s₁) t₁
+  eq (‘W’ S₀ T₀) (s₀ ◃ f₀) (‘W’ S₁ T₁) (s₁ ◃ f₁) =
+    eq S₀ s₀ S₁ s₁ ‘∧’
+    (‘∀’ (T₀ s₀) (λ y₀ → ‘∀’ (T₁ s₁) (λ y₁ → eq (T₀ s₀) y₀ (T₁ s₁) y₁ ‘⇒’
+                                             eq (‘W’ S₀ T₀) (f₀ y₀) (‘W’ S₁ T₁) (f₁ y₁))))
   eq  _           _         _           _        = ‘⊥’
 
 mutual
@@ -86,6 +91,7 @@ mutual
   coe (‘W’ S₀ T₀) (‘W’ S₁ T₁) (Qs , Qt) (s₀ ◃ f₀) with coe S₀ S₁ Qs s₀ | coh S₀ S₁ Qs s₀
   ... | s₁ | foo = s₁ ◃ (λ t₁ → coe (‘W’ S₀ T₀) (‘W’ S₁ T₁) (Qs , Qt)
                                     (f₀ (coe (T₁ s₁) (T₀ s₀) (Qt s₀ s₁ foo) t₁)))
+  -- Yuck, sadly there seem to be no better way of doing this.
   coe ‘0’           ‘1’        ()        _
   coe ‘0’           ‘2’        ()        _
   coe ‘0’          (‘Π’ _ _)   ()        _

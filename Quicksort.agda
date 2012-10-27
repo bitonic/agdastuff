@@ -235,28 +235,32 @@ perm-swap : (x l : List ℕ) (y z : ℕ) → perm (y ∷ z ∷ x) l →
             perm (z ∷ y ∷ x) l
 perm-swap x l y z p = {! !}
 
-perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
-           perm (l₁ ++ m₁) (l₂ ++ m₂)
-perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] l₂ pl
-perm-++₂ []       .[] m₁ m₂ pl pm n | refl = pm n
-perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n = {! !}
---   with perm-ind pl | perm-ind pm
--- perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n | (n₁ , (pn₁ , py₁)) | (n₂ , (pn₂ , py₂)) =
---   {! !}
+mutual
+  perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
+             perm (a ∷ x) (l ++ [ a ] ++ m)
+  perm-++₁ x []      m a p n with eq n a
+  ...                        | true  = cong suc (p n)
+  ...                        | false = p n
+  perm-++₁ x (y ∷ l) m a p n with perm-ind x (l ++ m) y p
+  perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) with perm-++₁ x₁ l m a p₁
+  perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂
+    with perm-++₂ [ y ] [ y ] (a ∷ x₁) (l ++ a ∷ m) (perm-refl [ y ]) p₂ |
+         perm-++₂ [ a ] [ a ] x (y ∷ x₁) (perm-refl [ a ]) px₁
+  perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂ | p₃ | p₄ =
+    perm-trans (a ∷ x) (a ∷ y ∷ x₁) (y ∷ l ++ a ∷ m) p₄
+               (perm-swap x₁ (y ∷ l ++ a ∷ m) y a p₃) n
 
-perm-++₁ : (x l m : List ℕ) (a : ℕ) → perm x (l ++ m) →
-           perm (a ∷ x) (l ++ [ a ] ++ m)
-perm-++₁ x []      m a p n with eq n a
-...                        | true  = cong suc (p n)
-...                        | false = p n
-perm-++₁ x (y ∷ l) m a p n with perm-ind x (l ++ m) y p
-perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) with perm-++₁ x₁ l m a p₁
-perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂
-  with perm-++₂ [ y ] [ y ] (a ∷ x₁) (l ++ a ∷ m) (perm-refl [ y ]) p₂ |
-       perm-++₂ [ a ] [ a ] x (y ∷ x₁) (perm-refl [ a ]) px₁
-perm-++₁ x (y ∷ l) m a p n | (x₁ , (p₁ , px₁)) | p₂ | p₃ | p₄ =
-  perm-trans (a ∷ x) (a ∷ y ∷ x₁) (y ∷ l ++ a ∷ m) p₄
-             (perm-swap x₁ (y ∷ l ++ a ∷ m) y a p₃) n
+  perm-++₂ : (l₁ l₂ m₁ m₂ : List ℕ) → perm l₁ l₂ → perm m₁ m₂ →
+             perm (l₁ ++ m₁) (l₂ ++ m₂)
+  perm-++₂ []       l₂  m₁ m₂ pl pm n with perm-[] l₂ pl
+  perm-++₂ []       .[] m₁ m₂ pl pm n | refl = pm n
+  perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n
+    with perm-ind l₂ l₁ x (perm-sym (x ∷ l₁) l₂ pl)
+  perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n | (l₃ , (pl₁ , p∷))
+    with perm-++₂ l₁ l₃ m₁ m₂ (perm-sym l₃ l₁ pl₁) pm
+  perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n | (l₃ , (pl₁ , p∷)) | pind
+    with perm-++₁ (l₁ ++ m₁) [] (l₃ ++ m₂) x pind
+  perm-++₂ (x ∷ l₁) l₂  m₁ m₂ pl pm n | (l₃ , (pl₁ , p∷)) | pind | ph = {! !}
 
 perm-filter : (l : List ℕ) (a : ℕ) →
               perm l (filter (lesseq₁ a) l ++ filter (greater₁ a) l)
