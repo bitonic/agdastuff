@@ -16,41 +16,51 @@ record Σ (S : Set) (T : S → Set) : Set where
     fst : S
     snd : T fst
 
+syntax Σ A (λ x → B) = Σ[ x ∶ A ] B
+
 data W (S : Set) (T : S → Set) : Set where
   _◃_ : (x : S) → (T x → W S T) → W S T
+
+syntax W A (λ x → B) = W[ x ∶ A ] B
 
 mutual
   data ‘set’ : Set where
     ‘0’ : ‘set’
     ‘1’ : ‘set’
     ‘2’ : ‘set’
-    ‘Π’ : (S : ‘set’) → (〚 S 〛 → ‘set’) → ‘set’
-    ‘Σ’ : (S : ‘set’) → (〚 S 〛 → ‘set’) → ‘set’
-    ‘W’ : (S : ‘set’) → (〚 S 〛 → ‘set’) → ‘set’
+    ‘Π’ : (S : ‘set’) → (⟦ S ⟧ → ‘set’) → ‘set’
+    ‘Σ’ : (S : ‘set’) → (⟦ S ⟧ → ‘set’) → ‘set’
+    ‘W’ : (S : ‘set’) → (⟦ S ⟧ → ‘set’) → ‘set’
 
-  〚_〛 : ‘set’ → Set
-  〚 ‘0’ 〛     = Empty
-  〚 ‘1’ 〛     = Unit
-  〚 ‘2’ 〛     = Bool
-  〚 ‘Π’ S T 〛 = (x : 〚 S 〛) → 〚 T x 〛
-  〚 ‘Σ’ S T 〛 = Σ 〚 S 〛 (λ x → 〚 T x 〛)
-  〚 ‘W’ S T 〛 = W 〚 S 〛 (λ x → 〚 T x 〛)
+  syntax ‘Π’ S (λ x → T) = ‘Π’[ x ∶ S ] T
+  syntax ‘Σ’ S (λ x → T) = ‘Σ’[ x ∶ S ] T
+  syntax ‘W’ S (λ x → T) = ‘W’[ x ∶ S ] T
+
+  ⟦_⟧ : ‘set’ → Set
+  ⟦ ‘0’ ⟧     = Empty
+  ⟦ ‘1’ ⟧     = Unit
+  ⟦ ‘2’ ⟧     = Bool
+  ⟦ ‘Π’ S T ⟧ = (x : ⟦ S ⟧) → ⟦ T x ⟧
+  ⟦ ‘Σ’ S T ⟧ = Σ[ x ∶ ⟦ S ⟧ ] ⟦ T x ⟧
+  ⟦ ‘W’ S T ⟧ = W[ x ∶ ⟦ S ⟧ ] ⟦ T x ⟧
 
 mutual
   data ‘prop’ : Set where
     ‘⊥’   : ‘prop’
     ‘⊤’   : ‘prop’
     _‘∧’_ : ‘prop’ → ‘prop’ → ‘prop’
-    ‘∀’   : (S : ‘set’) → (〚 S 〛 → ‘prop’) → ‘prop’
+    ‘∀’   : (S : ‘set’) → (⟦ S ⟧ → ‘prop’) → ‘prop’
+
+  syntax ‘∀’ S (λ x → T) = ‘∀’[ x ∶ S ] T
 
   ⌈_⌉ : ‘prop’ → ‘set’
   ⌈ ‘⊥’ ⌉     = ‘0’
   ⌈ ‘⊤’ ⌉     = ‘1’
-  ⌈ P ‘∧’ Q ⌉ = ‘Σ’ ⌈ P ⌉ (λ _ → ⌈ Q ⌉)
-  ⌈ ‘∀’ S T ⌉ = ‘Π’ S (λ t → ⌈ T t ⌉)
+  ⌈ P ‘∧’ Q ⌉ = ‘Σ’[ _ ∶ ⌈ P ⌉ ] ⌈ Q ⌉
+  ⌈ ‘∀’ S T ⌉ = ‘Π’[ t ∶ S ] ⌈ T t ⌉
 
 _‘⇒’_ : ‘prop’ → ‘prop’ → ‘prop’
-P ‘⇒’ Q = ‘∀’ ⌈ P ⌉ (λ _ → Q)
+P ‘⇒’ Q = ‘∀’[ _ ∶ ⌈ P ⌉ ] Q
 
 mutual
   Eq : ‘set’ → ‘set’ → ‘prop’
@@ -58,30 +68,30 @@ mutual
   Eq ‘1’          ‘1’        = ‘⊤’
   Eq ‘2’          ‘2’        = ‘⊤’
   Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) =
-    Eq S₁ S₀ ‘∧’ (‘∀’ S₁ (λ x₁ → ‘∀’ S₀ (λ x₀ → eq S₁ x₁ S₀ x₀ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
+    Eq S₁ S₀ ‘∧’ (‘∀’[ x₁ ∶ S₁ ] (‘∀’[ x₀ ∶ S₀ ] (eq S₁ x₁ S₀ x₀ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
   Eq (‘Σ’ S₀ T₀) (‘Σ’ S₁ T₁) =
-    Eq S₀ S₁ ‘∧’ (‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
+    Eq S₀ S₁ ‘∧’ (‘∀’[ x₀ ∶ S₀ ] (‘∀’[ x₁ ∶ S₁ ] (eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₀ x₀) (T₁ x₁))))
   Eq (‘W’ S₀ T₀) (‘W’ S₁ T₁) =
-    Eq S₀ S₁ ‘∧’ (‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₁ x₁) (T₀ x₀))))
+    Eq S₀ S₁ ‘∧’ (‘∀’[ x₀ ∶ S₀ ] (‘∀’[ x₁ ∶ S₁ ] (eq S₀ x₀ S₁ x₁ ‘⇒’ Eq (T₁ x₁) (T₀ x₀))))
   Eq  _           _          = ‘⊥’
 
-  eq : (S : ‘set’) → 〚 S 〛 → (T : ‘set’) → 〚 T 〛 → ‘prop’
+  eq : (S : ‘set’) → ⟦ S ⟧ → (T : ‘set’) → ⟦ T ⟧ → ‘prop’
   eq  ‘0’         _         ‘0’         _        = ‘⊤’
   eq  ‘1’         _         ‘1’         _        = ‘⊤’
   eq  ‘2’         tt        ‘2’         tt       = ‘⊤’
   eq  ‘2’         ff        ‘2’         ff       = ‘⊤’
   eq (‘Π’ S₀ T₀)  f₀       (‘Π’ S₁ T₁)  f₁       =
-    ‘∀’ S₀ (λ x₀ → ‘∀’ S₁ (λ x₁ → eq S₀ x₀ S₁ x₁ ‘⇒’ eq (T₀ x₀) (f₀ x₀) (T₁ x₁) (f₁ x₁)))
+    ‘∀’[ x₀ ∶ S₀ ] (‘∀’[ x₁ ∶ S₁ ] (eq S₀ x₀ S₁ x₁ ‘⇒’ eq (T₀ x₀) (f₀ x₀) (T₁ x₁) (f₁ x₁)))
   eq (‘Σ’ S₀ T₀) (s₀ , t₀) (‘Σ’ S₁ T₁) (s₁ , t₁) =
     eq S₀ s₀ S₁ s₁ ‘∧’ eq (T₀ s₀) t₀ (T₁ s₁) t₁
   eq (‘W’ S₀ T₀) (s₀ ◃ f₀) (‘W’ S₁ T₁) (s₁ ◃ f₁) =
     eq S₀ s₀ S₁ s₁ ‘∧’
-    (‘∀’ (T₀ s₀) (λ y₀ → ‘∀’ (T₁ s₁) (λ y₁ → eq (T₀ s₀) y₀ (T₁ s₁) y₁ ‘⇒’
-                                             eq (‘W’ S₀ T₀) (f₀ y₀) (‘W’ S₁ T₁) (f₁ y₁))))
+    (‘∀’[ y₀ ∶ T₀ s₀ ] (‘∀’[ y₁ ∶ T₁ s₁ ] (eq (T₀ s₀) y₀ (T₁ s₁) y₁ ‘⇒’
+                                           eq (‘W’ S₀ T₀) (f₀ y₀) (‘W’ S₁ T₁) (f₁ y₁))))
   eq  _           _         _           _        = ‘⊥’
 
 mutual
-  coe : (S : ‘set’) (T : ‘set’) → 〚 ⌈ Eq S T ⌉ 〛 → 〚 S 〛 → 〚 T 〛
+  coe : (S : ‘set’) (T : ‘set’) → ⟦ ⌈ Eq S T ⌉ ⟧ → ⟦ S ⟧ → ⟦ T ⟧
   coe ‘0’          ‘0’         _         z        = z
   coe ‘1’          ‘1’         _         u        = u
   coe ‘2’          ‘2’         _         b        = b
@@ -123,12 +133,12 @@ mutual
   coe (‘W’ _ _)    (‘Π’ _ _)   ()        _
   coe (‘W’ _ _)    (‘Σ’ _ _)   ()        _
 
-  coeΠ : (S₀ : ‘set’) (T₀ : 〚 S₀ 〛 → ‘set’) (S₁ : ‘set’) (T₁ : 〚 S₁ 〛 → ‘set’) →
-         〚 ⌈ Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) ⌉ 〛 → 〚 ‘Π’ S₀ T₀ 〛 →
-         (x : 〚 S₁ 〛) → 〚 T₁ x 〛
+  coeΠ : (S₀ : ‘set’) (T₀ : ⟦ S₀ ⟧ → ‘set’) (S₁ : ‘set’) (T₁ : ⟦ S₁ ⟧ → ‘set’) →
+         ⟦ ⌈ Eq (‘Π’ S₀ T₀) (‘Π’ S₁ T₁) ⌉ ⟧ → ⟦ ‘Π’ S₀ T₀ ⟧ →
+         (x : ⟦ S₁ ⟧) → ⟦ T₁ x ⟧
   coeΠ S₀ T₀ S₁ T₁ (Qs , Qt) f₀ s₁ with coe S₁ S₀ Qs s₁ | coh S₁ S₀ Qs s₁
   ... | s₀ | foo = coe (T₀ s₀) (T₁ s₁) (Qt s₁ s₀ foo) (f₀ s₀)
 
-  coh : (S : ‘set’) (T : ‘set’) (Q : 〚 ⌈ Eq S T ⌉ 〛) (s : 〚 S 〛) →
-        〚 ⌈ eq S s T (coe S T Q s) ⌉ 〛
+  coh : (S : ‘set’) (T : ‘set’) (Q : ⟦ ⌈ Eq S T ⌉ ⟧) (s : ⟦ S ⟧) →
+        ⟦ ⌈ eq S s T (coe S T Q s) ⌉ ⟧
   coh S T Q s = {! !}
