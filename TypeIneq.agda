@@ -30,12 +30,12 @@ import Level
 
     ≡Bool : to 0 ≡ to 1 ⊎ to 1 ≡ to 2 ⊎ to 0 ≡ to 2
     ≡Bool with to 0 | to 1 | to 2
-    ≡Bool | _     | true  | true  = inj₂ (inj₁ refl)
-    ≡Bool | _     | false | false = inj₂ (inj₁ refl)
-    ≡Bool | true  | _     | true  = inj₂ (inj₂ refl)
-    ≡Bool | false | _     | false = inj₂ (inj₂ refl)
     ≡Bool | true  | true  | _     = inj₁ refl
     ≡Bool | false | false | _     = inj₁ refl
+    ≡Bool | true  | _     | true  = inj₂ (inj₂ refl)
+    ≡Bool | false | _     | false = inj₂ (inj₂ refl)
+    ≡Bool | _     | true  | true  = inj₂ (inj₁ refl)
+    ≡Bool | _     | false | false = inj₂ (inj₁ refl)
 
     boom : ⊥
     boom with ≡Bool
